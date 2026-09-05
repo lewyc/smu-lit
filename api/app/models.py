@@ -51,6 +51,9 @@ ReviewStatus = Literal["draft", "approved", "rejected", "superseded"]
 ValidationStatus = Literal["valid", "warning", "invalid"]
 AssessmentConfidence = Literal["high", "medium", "low"]
 Severity = Literal["critical", "serious", "review", "informational"]
+CaseMapFieldTier = Literal["A", "B", "C"]
+ExtractionMethod = Literal["deterministic", "rule_based", "model", "human", "hybrid"]
+AssuranceQuestionKey = Literal["existence", "fidelity", "legal_significance", "completeness"]
 
 
 class Passage(BaseModel):
@@ -196,6 +199,13 @@ class Evidence(BaseModel):
     ai_supported: bool = False
 
 
+class QuoteCheck(BaseModel):
+    quote: str
+    status: Literal["exact_match", "normalised_match", "not_found", "not_assessed"]
+    paragraph_label: str | None = None
+    method: Literal["exact", "whitespace_normalised", "none"] = "none"
+
+
 class AuditedClaim(ParsedClaim):
     verdict: AuditVerdict
     rationale: str
@@ -220,6 +230,9 @@ class AuditedClaim(ParsedClaim):
     case_map_version: str | None = None
     case_map_review_status: ReviewStatus | None = None
     pending_feedback: bool = False
+    requires_authority: Literal["true", "false", "uncertain"] = "true"
+    failure_level: Literal[1, 2, 3, 4, 5] | None = None
+    quote_checks: list[QuoteCheck] = Field(default_factory=list)
 
 
 class EvaluationFlag(BaseModel):
@@ -240,6 +253,9 @@ class EvaluationFlag(BaseModel):
         "potentially_one_sided",
         "missing_limiting_authority",
         "policy_factor_not_addressed",
+        "landmark_candidate_not_engaged",
+        "unsupported_legal_assertion",
+        "unverified_quote",
     ]
     module: Literal["citation_integrity", "propositional_accuracy", "relevance_currency", "balance_completeness"]
     severity: Severity
@@ -253,6 +269,68 @@ class ModuleScore(BaseModel):
     weight: int = Field(ge=0, le=100)
     assessed: bool
     reason_not_assessed: str | None = None
+
+
+class ScoreGate(BaseModel):
+    gate_id: str
+    label: str
+    status: Literal["passed", "triggered", "not_assessed"]
+    effect: str
+    basis_tier: Literal["A", "B", "human_verified_C", "none"]
+    reason: str
+
+
+class FailureFinding(BaseModel):
+    level: Literal[1, 2, 3, 4, 5]
+    name: str
+    description: str
+    claim_order: int | None = None
+    decision_rule_id: str | None = None
+
+
+class AssuranceQuestionResult(BaseModel):
+    key: AssuranceQuestionKey
+    question: str
+    status: Literal["passed", "flagged", "partial", "not_assessed"]
+    summary: str
+    finding_count: int = 0
+    failure_levels: list[int] = Field(default_factory=list)
+
+
+class ClaimGraphNode(BaseModel):
+    id: str
+    node_type: Literal["claim", "authority"]
+    label: str
+    proposition: str | None = None
+    resolution_status: Literal["resolved", "unresolved", "negative_registry_check", "not_applicable"] = "not_applicable"
+    requires_authority: Literal["true", "false", "uncertain"] | None = None
+
+
+class ClaimAuthorityEdge(BaseModel):
+    claim_id: str
+    authority_id: str
+    relation: Literal["purports_to_support", "supports", "unresolved", "contradicts"]
+    mapping_confidence: float = Field(ge=0, le=1)
+
+
+class ClaimGraph(BaseModel):
+    version: str
+    nodes: list[ClaimGraphNode]
+    edges: list[ClaimAuthorityEdge]
+
+
+class CompletenessSearch(BaseModel):
+    finding: str
+    issue_tag: str
+    corpus_scope: str
+    landmark_set: list[str]
+    landmark_set_version: str
+    validation_status: str
+    retrieval_configuration: str
+    independence_attestation: str
+    searched_and_not_found: list[str]
+    confidence_band: str
+    measured_accuracy: float | None = None
 
 
 class ContextProfile(BaseModel):
@@ -340,6 +418,25 @@ class AuditDetail(AuditSummary):
     context_profile: ContextProfile | None = None
     flags: list[EvaluationFlag] = Field(default_factory=list)
     evaluation_provenance: dict[str, object] = Field(default_factory=dict)
+    assurance_policy_version: str = "legacy-unversioned"
+    assurance_questions: list[AssuranceQuestionResult] = Field(default_factory=list)
+    failure_findings: list[FailureFinding] = Field(default_factory=list)
+    claim_graph: ClaimGraph | None = None
+    score_gates: list[ScoreGate] = Field(default_factory=list)
+    score_cap: float | None = Field(default=None, ge=0, le=100)
+    completeness_searches: list[CompletenessSearch] = Field(default_factory=list)
+
+
+class CaseMapFieldProvenance(BaseModel):
+    field: str
+    tier: CaseMapFieldTier
+    extraction_method: ExtractionMethod
+    confidence: float = Field(ge=0, le=1)
+    human_verified: bool = False
+    verified_by: UUID | None = None
+    supporting_evidence: list[str] = Field(default_factory=list)
+    version: int = Field(default=1, ge=1)
+    superseded_by: int | None = Field(default=None, ge=1)
 
 
 class CaseMapAnnotation(BaseModel):
@@ -356,6 +453,7 @@ class CaseMapAnnotation(BaseModel):
     validation_status: ValidationStatus = "valid"
     validation_messages: list[str] = Field(default_factory=list)
     review_status: ReviewStatus = "draft"
+    provenance: CaseMapFieldProvenance | None = None
 
 
 class CaseMapDraft(BaseModel):

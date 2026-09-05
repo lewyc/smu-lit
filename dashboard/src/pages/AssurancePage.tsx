@@ -14,6 +14,9 @@ const current = [
   'Lawyer editing, approval and immutable review history',
   'Deterministic modality checks and lawyer handoff',
   'Controlled practitioner feedback without self-training',
+  'Five-level legal-AI failure taxonomy and Q1–Q4 assurance spine',
+  'Claim Graph plus one bounded, disclosed landmark-set comparison',
+  'Tier A/B/C Case Map field provenance and gate-before-weight scoring',
   'Supabase Auth, RLS, and durable audit records',
   'Source-versioned cache, stale-report warning, and linked re-audit',
   'Reviewer-only treatment, supersession, and amendment register',
@@ -67,6 +70,18 @@ export function AssurancePage() {
           <div><strong>Outcome</strong><span>Evaluation and lawyer handoff</span></div>
         </div>
         <p>Absence from this corpus is never treated as proof that an authority does not exist. “Likely fabricated” requires a separately recorded negative official-registry check.</p>
+      </div>
+      <div className="panel boundary-panel">
+        <p className="eyebrow">Five levels of failure</p>
+        <h2>“The case exists” is only the first test</h2>
+        <div className="failure-level-grid">
+          <div><strong>01 · Citation hallucination</strong><span>Authority does not exist; requires recorded official negative evidence.</span></div>
+          <div><strong>02 · Citation substitution</strong><span>Real citation, wrong case identity or court code.</span></div>
+          <div><strong>03 · Citation fidelity</strong><span>The authority exists but does not support the attributed proposition.</span></div>
+          <div><strong>04 · Contextual hallucination</strong><span>Words appear, but role, modality, facts, or weight are misrepresented.</span></div>
+          <div><strong>05 · Synthesis and coverage</strong><span>Material issues, qualifications, or bounded landmark candidates may be absent.</span></div>
+        </div>
+        <p>Levels 4–5 remain lawyer-review prompts where the automated evidence is judgmental. “Every claim checked; every finding traceable” is the product promise—not automatic legal correctness.</p>
       </div>
       <div className="corpus-notice">
         <strong>Licensed materials: future integration only.</strong> ProofMark does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.

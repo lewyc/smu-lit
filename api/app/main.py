@@ -10,6 +10,7 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.assurance import assurance_policy
 from app.case_maps import CaseMapService, LocalFeedbackRepository
 from app.config import get_settings
 from app.corpus import DEMO_ANSWER, ActiveCorpusRepository, GoldFixtureCorpusRepository
@@ -501,11 +502,13 @@ def run_benchmark():
 
 @app.get("/api/v1/assurance")
 def assurance():
+    policy = assurance_policy()
     return {
         "engine_version": ENGINE_VERSION,
         "taxonomy_version": TAXONOMY_VERSION,
         "corpus": engine.corpus.get_metadata(),
         "propositions": sorted(PROPOSITIONS),
+        "assurance_policy": policy,
         "decision_rules": {
             "truth_source": "controlled annotations and official-registry checks",
             "ranking": "TF-IDF ranks passages but never selects the verdict",
@@ -528,8 +531,12 @@ def assurance():
             "Read-only immutable snapshot with warmed TF-IDF vectors",
             "Optional Supabase Auth and tenant-isolated persistence",
             "Versioned Case Map drafts, deterministic quote validation and lawyer approval",
-            "Citation-only and full contextual audit modes",
+            "Citation-only audits; historical full-mode records remain readable",
             "Practitioner feedback review queue without automatic self-learning",
+            "Five-level failure taxonomy and four-question assurance spine",
+            "Tier A/B/C Case Map provenance envelopes",
+            "Gate-before-weight scoring and a versioned claim graph",
+            "One bounded landmark-set comparison with negative-finding disclosure",
         ],
         "production_architecture": [
             "Durable scheduled refresh jobs with source-freshness monitoring",
@@ -538,6 +545,8 @@ def assurance():
             "pgvector alongside lexical retrieval",
             "Organisation administration and monitoring",
             "LicensedSourceConnector for SAL/SLR/LawNet only where tenant licensing permits",
+            "Independent counter-authority retrieval and calibrated Legal NLI",
+            "Corpus-scale treatment graph, bias studies, and statistically valid calibration",
         ],
         "prohibited_uses": [
             "Legal advice or autonomous legal decision-making",

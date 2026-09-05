@@ -12,6 +12,15 @@ from uuid import uuid4
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.assurance import (
+    add_completeness_flags,
+    assurance_policy,
+    assurance_questions,
+    build_claim_graph,
+    completeness_searches,
+    failure_findings,
+    score_gates,
+)
 from app.config import Settings
 from app.corpus import ActiveCorpusRepository, CorpusRepository, GoldFixtureCorpusRepository
 from app.evaluation import context_profile, evaluate_framework, overall_score
@@ -24,11 +33,12 @@ from app.models import (
     Evidence,
     HandoffBrief,
     ParsedClaim,
+    QuoteCheck,
 )
 from app.parsers import normalise_citation, parse_with_mode
 from app.taxonomy import TAXONOMY_VERSION
 
-ENGINE_VERSION = "proofmark-rules-0.3.0"
+ENGINE_VERSION = "proofmark-rules-0.4.0"
 LOCAL_PARSER_VERSION = "local-claims.2"
 
 
@@ -188,6 +198,44 @@ class VerdictEngine:
             result.citation_identity_status = "unresolved"
             return result
 
+        # Tier 0 quote status is a deterministic gate.  Compute it before the
+        # richer quote-check report so a wrong quote cannot be downgraded to a
+        # generic "not found" citation error.
+        quote_status = self._quote_status(claim, authority)
+        quote_checks = self._verify_quotes(claim, authority)
+        if quote_status == "mismatch":
+            result = self._result(
+                claim,
+                "unsupported",
+                "The direct quote does not appear in the cited, pinpointed official paragraph retained in the frozen snapshot.",
+                "Check the quoted words and pinpoint against the official judgment; Tier 0 does not infer a semantic match.",
+                [],
+            )
+            result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.decision_rule_id = "PM-QUO-001"
+            result.severity = "serious"
+            result.quote_checks = quote_checks
+            return result
+        if any(check.status == "not_found" for check in quote_checks):
+            result = self._result(
+                claim,
+                "unsupported",
+                (
+                    f"{authority.citation} exists, but quoted wording in the answer was not found in the retained "
+                    "judgment text after exact and whitespace-normalised checks."
+                ),
+                "Confirm the quotation against the official judgment or remove quotation marks.",
+                [],
+            )
+            result.quote_checks = quote_checks
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.decision_rule_id = "PM-CIT-008"
+            result.severity = "serious"
+            return result
+
         if claim.case_name_mention and not self._case_name_consistent(claim.case_name_mention, authority.case_name):
             result = self._result(
                 claim,
@@ -199,9 +247,9 @@ class VerdictEngine:
             result.decision_rule_id = "PM-CIT-005"
             result.severity = "serious"
             result.citation_identity_status = "case_name_mismatch"
+            result.quote_checks = quote_checks
             return result
 
-        quote_status = self._quote_status(claim, authority)
         evidence = self.matcher.rank(claim, authority)
         supporting = [item for item in evidence if item.relation == "supports"]
         if claim.pinpoint and not evidence:
@@ -217,20 +265,7 @@ class VerdictEngine:
             result.citation_identity_status = "matched"
             result.decision_rule_id = "PM-CIT-006"
             result.severity = "serious"
-            return result
-        if quote_status == "mismatch":
-            result = self._result(
-                claim,
-                "unsupported",
-                "The direct quote does not appear in the cited, pinpointed official paragraph retained in the frozen snapshot.",
-                "Check the quoted words and pinpoint against the official judgment; Tier 0 does not infer a semantic match.",
-                evidence,
-            )
-            result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
-            result.quote_status = quote_status
-            result.citation_identity_status = "matched"
-            result.decision_rule_id = "PM-QUO-001"
-            result.severity = "serious"
+            result.quote_checks = quote_checks
             return result
         if not supporting:
             result = self._result(
@@ -246,6 +281,7 @@ class VerdictEngine:
                 result.severity = "serious"
             result.quote_status = quote_status
             result.citation_identity_status = "matched"
+            result.quote_checks = quote_checks
             return result
 
         source_role = self._source_role_for(evidence)
@@ -262,6 +298,7 @@ class VerdictEngine:
             result.citation_identity_status = "matched"
             result.source_role_status = source_role
             result.decision_rule_id = "PM-ROLE-001"
+            result.quote_checks = quote_checks
             return result
 
         if claim.overgeneralisation_terms or claim.parser_confidence < 0.6:
@@ -283,6 +320,7 @@ class VerdictEngine:
             result.citation_identity_status = "matched"
             result.source_role_status = source_role
             result.decision_rule_id = "PM-PROP-003"
+            result.quote_checks = quote_checks
             return result
 
         if any(item.passage.annotation_disagrees for item in supporting):
@@ -298,6 +336,7 @@ class VerdictEngine:
             result.citation_identity_status = "matched"
             result.source_role_status = source_role
             result.decision_rule_id = "PM-PROP-004"
+            result.quote_checks = quote_checks
             return result
 
         if authority.source_provenance != "gold_fixture":
@@ -322,6 +361,7 @@ class VerdictEngine:
             result.source_role_status = source_role
             result.decision_rule_id = "PM-TRUST-001"
             result.assessment_confidence = "medium"
+            result.quote_checks = quote_checks
             return result
 
         # The only pathway to verified is the separated, hand-labelled benchmark corpus.
@@ -339,6 +379,7 @@ class VerdictEngine:
         result.decision_rule_id = "PM-GOLD-001"
         result.severity = "informational"
         result.assessment_confidence = "high"
+        result.quote_checks = quote_checks
         return result
 
     @staticmethod
@@ -395,6 +436,13 @@ class VerdictEngine:
             decision_rule_id=rule_ids[verdict],
             severity=severities[verdict],
             assessment_confidence="high" if verdict in {"verified", "likely_fabricated"} else "medium" if evidence else "low",
+            requires_authority="uncertain" if verdict == "out_of_scope" else "true",
+            quote_checks=[
+                QuoteCheck(quote=value, status="not_assessed")
+                for match in re.finditer(r'"([^"]{8,})"|“([^”]{8,})”', claim.text)
+                for value in match.groups()
+                if value is not None
+            ],
         )
 
     @staticmethod
@@ -409,6 +457,35 @@ class VerdictEngine:
 
         mentioned, official = sides(mention), sides(canonical)
         return len(mentioned) == 2 and len(official) == 2 and all(left & right for left, right in zip(mentioned, official, strict=True))
+
+    @staticmethod
+    def _verify_quotes(claim: ParsedClaim, authority) -> list[QuoteCheck]:
+        quoted = [
+            next(value for value in match.groups() if value is not None)
+            for match in re.finditer(r'"([^"]{8,})"|“([^”]{8,})”', claim.text)
+        ]
+        checks: list[QuoteCheck] = []
+        for quote in quoted:
+            exact = next((item for item in authority.passages if quote in item.text), None)
+            if exact:
+                checks.append(
+                    QuoteCheck(quote=quote, status="exact_match", paragraph_label=exact.paragraph_label, method="exact")
+                )
+                continue
+            normalised_quote = " ".join(quote.split())
+            normalised = next(
+                (item for item in authority.passages if normalised_quote in " ".join(item.text.split())),
+                None,
+            )
+            checks.append(
+                QuoteCheck(
+                    quote=quote,
+                    status="normalised_match" if normalised else "not_found",
+                    paragraph_label=normalised.paragraph_label if normalised else None,
+                    method="whitespace_normalised" if normalised else "none",
+                )
+            )
+        return checks
 
 
 class HandoffBuilder:
@@ -502,6 +579,7 @@ class AuditEngine:
             "parser_version": parser_version,
             "taxonomy_version": TAXONOMY_VERSION,
             "currency_registry_version": currency_registry_version,
+            "assurance_policy_version": assurance_policy()["policy_version"],
         }
         return hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -526,6 +604,18 @@ class AuditEngine:
         profile = context_profile(submission.original_question, submission.facts) if submission.audit_mode == "full" else None
         flags, modules = evaluate_framework(claims, submission.audit_mode, profile)
         metadata = self.corpus.get_metadata()
+        searches = completeness_searches(
+            claims,
+            submission.audit_mode,
+            metadata.version,
+            metadata.scope_statement,
+        )
+        flags = add_completeness_flags(flags, searches)
+        failures = failure_findings(claims, flags)
+        gates, score_cap = score_gates(claims)
+        computed_overall = overall_score(modules, submission.audit_mode)
+        if computed_overall is not None and score_cap is not None:
+            computed_overall = min(computed_overall, score_cap)
         parser_version = f"gemini-claims:{self.settings.claim_model}" if parse_result.parser_used == "gemini" else LOCAL_PARSER_VERSION
         return AuditDetail(
             public_id=uuid4(),
@@ -543,7 +633,7 @@ class AuditEngine:
                 propositional_accuracy_module=modules["proposition"],
                 relevance_currency_module=modules["currency"],
                 balance_completeness_module=modules["balance"],
-                overall_score=overall_score(modules, submission.audit_mode),
+                overall_score=computed_overall,
             ),
             is_saved_demo=False,
             engine_version=ENGINE_VERSION,
@@ -576,7 +666,17 @@ class AuditEngine:
                 "currency_registry_version": currency_registry_version,
                 "feedback_policy": "reviewed-revisions; no automatic retraining",
                 "parser_model": self.settings.claim_model if parse_result.parser_used == "gemini" else "local",
+                "assurance_policy_version": assurance_policy()["policy_version"],
+                "claim_graph_version": assurance_policy()["claim_graph_version"],
+                "completeness_policy": "static-pilot-landmark-set; no counter-authority retrieval",
             },
+            assurance_policy_version=str(assurance_policy()["policy_version"]),
+            assurance_questions=assurance_questions(claims, flags, searches, submission.audit_mode),
+            failure_findings=failures,
+            claim_graph=build_claim_graph(claims),
+            score_gates=gates,
+            score_cap=score_cap,
+            completeness_searches=searches,
         )
 
     @staticmethod

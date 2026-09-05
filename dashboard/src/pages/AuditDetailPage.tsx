@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, FileText, Flag, RefreshCw, Scale, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FileText, Flag, Network, RefreshCw, Scale, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -30,7 +30,22 @@ export function AuditDetailPage() {
   if (error) return <section className="page"><ErrorPanel message={error} /></section>
   if (!audit) return <section className="page"><LoadingPanel label="Loading evidence report" /></section>
 
-  const metricData = [{ name: 'Citation integrity', value: audit.metrics.citation_integrity }]
+  const metricData = [
+    { name: 'Citation integrity', value: audit.metrics.citation_integrity },
+    { name: 'Grounded coverage', value: audit.metrics.grounded_coverage },
+    { name: 'Contextual support', value: audit.metrics.contextual_support },
+  ]
+  const modules = [
+    ['Citation integrity', audit.metrics.citation_integrity_module],
+    ['Propositional accuracy', audit.metrics.propositional_accuracy_module],
+    ['Relevance / currency', audit.metrics.relevance_currency_module],
+    ['Balance / completeness', audit.metrics.balance_completeness_module],
+  ] as const
+  const authorityNodes = new Map(
+    (audit.claim_graph?.nodes ?? [])
+      .filter((node) => node.node_type === 'authority')
+      .map((node) => [node.id, node]),
+  )
 
   async function submitFeedback(claimOrder: number) {
     if (!feedbackText.trim()) return setFeedbackMessage('Explain what appears inaccurate.')
@@ -120,6 +135,22 @@ export function AuditDetailPage() {
           </div>
         )}
       </section>
+      {(audit.assurance_questions?.length ?? 0) > 0 && (
+        <section className="assurance-spine" aria-label="Four-question assurance spine">
+          {audit.assurance_questions!.map((question, index) => (
+            <article className={'panel assurance-question ' + question.status} key={question.key}>
+              <div className="question-number">Q{index + 1}</div>
+              <div>
+                <p className="eyebrow">Levels {question.failure_levels.join('–')}</p>
+                <h2>{question.key.replace('_', ' ')}</h2>
+                <strong>{question.question}</strong>
+                <p>{question.summary}</p>
+              </div>
+              <span className={'question-status ' + question.status}>{question.status.replace('_', ' ')}</span>
+            </article>
+          ))}
+        </section>
+      )}
       <div className="detail-top-grid">
         <div className="panel metric-chart">
           <div><p className="eyebrow">Tier 0 metric</p><h2>Citation integrity</h2></div>
@@ -155,7 +186,40 @@ export function AuditDetailPage() {
         </div>
       </div>
 
-      {tier0Flags.length > 0 && (
+      <section className="module-score-grid" aria-label="Framework module scores">
+        {modules.map(([label, module]) => (
+          <div className="panel module-score" key={label}>
+            <p className="eyebrow">{module?.weight ?? 0}% framework weight</p>
+            <h3>{label}</h3>
+            <strong>{module?.assessed ? `${module.score}%` : 'Not assessed'}</strong>
+            {!module?.assessed && <small>{module?.reason_not_assessed ?? 'This dimension was unavailable.'}</small>}
+          </div>
+        ))}
+        {audit.audit_mode === 'full' && <div className="overall-score"><span>Overall score</span><strong>{audit.metrics.overall_score == null ? 'Withheld' : `${audit.metrics.overall_score}%`}</strong><small>Shown only when every weighted module was assessed.</small></div>}
+      </section>
+
+      {(audit.score_gates?.length ?? 0) > 0 && (
+        <section className="panel gate-panel">
+          <div className="gate-heading">
+            <div><p className="eyebrow">Gates before weights</p><h2>Non-negotiable assurance checks</h2></div>
+            <span className={audit.score_cap == null ? 'gate-cap clear' : 'gate-cap triggered'}>
+              {audit.score_cap == null ? 'No score cap' : 'Composite capped at ' + audit.score_cap}
+            </span>
+          </div>
+          <div className="gate-grid">
+            {audit.score_gates!.map((gate) => (
+              <article key={gate.gate_id} className={'gate-card ' + gate.status}>
+                <div><strong>{gate.label}</strong><span>{gate.status.replace('_', ' ')}</span></div>
+                <p>{gate.reason}</p>
+                <small>Basis: {gate.basis_tier === 'none' ? 'not assessed' : 'Tier ' + gate.basis_tier.replace('_', ' ')} · {gate.effect}</small>
+              </article>
+            ))}
+          </div>
+          <p className="metric-note">No hard gate relies on a model-extracted Tier C Case Map field alone. Weights are loaded from policy {audit.assurance_policy_version ?? 'legacy'}.</p>
+        </section>
+      )}
+
+      {(audit.flags?.length ?? 0) > 0 && (
         <section id="review-prompts" className="panel framework-flags">
           <p className="eyebrow">Tier 0 review flags</p>
           <h2>Lawyer review prompts</h2>
@@ -187,6 +251,52 @@ export function AuditDetailPage() {
         </section>
       )}
 
+      {audit.claim_graph && (
+        <section className="panel claim-graph-panel">
+          <div className="graph-heading"><span><Network size={20} /></span><div><p className="eyebrow">Claim graph</p><h2>What each claim says supports it</h2></div></div>
+          <p className="prompt-intro">A deterministic bipartite view makes uncited assertions and ambiguous mappings visible. It is not a graph-database dependency.</p>
+          <div className="claim-graph-list">
+            {audit.claim_graph.nodes.filter((node) => node.node_type === 'claim').map((node) => {
+              const links = audit.claim_graph!.edges.filter((edge) => edge.claim_id === node.id)
+              return (
+                <div className="claim-graph-row" key={node.id}>
+                  <a href={'#claim-' + node.id.split(':')[1]}><strong>{node.id.replace(':', ' ')}</strong><span>{excerpt(node.label, 150)}</span></a>
+                  <div className="graph-arrow">→</div>
+                  <div className={links.length ? 'graph-authorities' : 'graph-authorities missing'}>
+                    {links.length ? links.map((edge) => {
+                      const authority = authorityNodes.get(edge.authority_id)
+                      return <span key={edge.authority_id}><strong>{authority?.label ?? edge.authority_id}</strong><small>{edge.relation.replaceAll('_', ' ')}</small></span>
+                    }) : <span><strong>NONE</strong><small>unsupported legal assertion</small></span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {(audit.completeness_searches?.length ?? 0) > 0 && (
+        <section className="panel negative-findings-panel">
+          <p className="eyebrow">Q4 · evidence for an absence</p>
+          <h2>Completeness search disclosures</h2>
+          <p className="prompt-intro">A missing-authority prompt cannot cite an absent passage, so ProofMark discloses exactly what its bounded check searched.</p>
+          {audit.completeness_searches!.map((search) => (
+            <details key={search.landmark_set_version} open={search.searched_and_not_found.length > 0}>
+              <summary><strong>{search.finding}</strong><span>{search.issue_tag.replaceAll('_', ' ')}</span></summary>
+              <dl>
+                <div><dt>Corpus scope</dt><dd>{search.corpus_scope}</dd></div>
+                <div><dt>Landmark set</dt><dd>{search.landmark_set.join(', ')} · {search.landmark_set_version}</dd></div>
+                <div><dt>Validation</dt><dd>{search.validation_status}</dd></div>
+                <div><dt>Configuration</dt><dd>{search.retrieval_configuration}</dd></div>
+                <div><dt>Independence</dt><dd>{search.independence_attestation}</dd></div>
+                <div><dt>Searched and not found</dt><dd>{search.searched_and_not_found.join(', ') || 'None in the bounded set'}</dd></div>
+                <div><dt>Confidence</dt><dd>{search.confidence_band}; measured accuracy not yet established</dd></div>
+              </dl>
+            </details>
+          ))}
+        </section>
+      )}
+
       <div className="report-grid">
         <aside className="claim-rail panel">
           <p className="eyebrow">Claim rail</p>
@@ -201,7 +311,7 @@ export function AuditDetailPage() {
           {audit.claims.map((claim) => (
             <article id={`claim-${claim.order}`} className={`panel claim-card claim-${claim.verdict}`} key={claim.order}>
               <div className="claim-heading">
-                <div><p className="eyebrow">Claim {claim.order.toString().padStart(2, '0')}</p><h2>{claim.text}</h2></div>
+                <div><p className="eyebrow">Claim {claim.order.toString().padStart(2, '0')}{claim.failure_level ? ' · Level ' + claim.failure_level : ''}</p><h2>{claim.text}</h2></div>
                 <VerdictBadge verdict={claim.verdict} />
               </div>
               <div className="claim-meta">
@@ -215,6 +325,7 @@ export function AuditDetailPage() {
                 <span><strong>Source role</strong>{claim.source_role_status?.replaceAll('_', ' ') ?? 'unreviewed'}</span>
                 <span><strong>Currency</strong>{claim.currency_status?.replaceAll('_', ' ') ?? 'not verified'}</span>
                 <span><strong>Decision rule</strong>{claim.decision_rule_id ?? 'legacy result'}</span>
+                <span><strong>Requires authority</strong>{claim.requires_authority ?? 'uncertain'}</span>
               </div>
               <div className="rationale">
                 <Scale size={17} />
@@ -222,6 +333,14 @@ export function AuditDetailPage() {
               </div>
               {claim.missing_evidence && (
                 <div className="missing-evidence"><strong>What is missing</strong><p>{claim.missing_evidence}</p></div>
+              )}
+              {(claim.quote_checks?.length ?? 0) > 0 && (
+                <div className="quote-checks">
+                  <strong>Verbatim quotation check</strong>
+                  {claim.quote_checks!.map((check) => (
+                    <p key={check.quote}><q>{check.quote}</q><span>{check.status.replace('_', ' ')}{check.paragraph_label ? ' · ' + check.paragraph_label : ''}</span></p>
+                  ))}
+                </div>
               )}
               {claim.evidence.map((evidence) => (
                 <details className="evidence-box" key={evidence.passage.id} open={claim.verdict === 'verified'}>
