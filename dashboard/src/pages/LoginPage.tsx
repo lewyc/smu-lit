@@ -27,7 +27,7 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={submit}>
-        <div className="login-brand"><span><Scale size={22} /></span><strong>ProofMark</strong></div>
+        <div className="login-brand"><span><Scale size={22} /></span><strong>VERITAS</strong></div>
         <p className="eyebrow">Connected mode</p>
         <h1>Sign in to your organisation</h1>
         <p>Use the demonstration account created in Supabase Auth.</p>

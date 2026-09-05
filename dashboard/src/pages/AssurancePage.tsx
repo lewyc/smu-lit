@@ -52,7 +52,7 @@ export function AssurancePage() {
           <span><ShieldCheck size={24} /></span>
           <p className="eyebrow">Intended use</p>
           <h2>Help lawyers triage AI-generated legal answers—not replace legal judgment.</h2>
-          <p>ProofMark turns opaque prose into inspectable claims, links each claim to stored evidence, and escalates uncertainty to a named human review step.</p>
+          <p>VERITAS turns opaque prose into inspectable claims, links each claim to stored evidence, and escalates uncertainty to a named human review step.</p>
         </div>
         <div className="principle-stack">
           <div><CheckCircle2 size={18} /><span><strong>Deterministic verdicts</strong>Models cannot mark their own work correct.</span></div>
@@ -84,7 +84,7 @@ export function AssurancePage() {
         <p>Levels 4–5 remain lawyer-review prompts where the automated evidence is judgmental. “Every claim checked; every finding traceable” is the product promise—not automatic legal correctness.</p>
       </div>
       <div className="corpus-notice">
-        <strong>Licensed materials: future integration only.</strong> ProofMark does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
+        <strong>Licensed materials: future integration only.</strong> VERITAS does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
       </div>
       <div className="corpus-notice">
         <strong>Research candidates are not verdict evidence.</strong> A future offline catalogue may use the independent CC BY 4.0 SG-LegalCite benchmark to nominate potentially relevant authorities. Its citing-judgment context and LLM-extracted principle are discovery metadata only; official paragraphs, reviewed Case Maps, and treatment review remain required before any legal support is presented.
@@ -117,7 +117,7 @@ export function AssurancePage() {
         </div>
       </div>
       <div className="panel prohibited-panel">
-        <div><Ban size={20} /><span><p className="eyebrow">Prohibited uses</p><h2>What ProofMark must not do</h2></span></div>
+        <div><Ban size={20} /><span><p className="eyebrow">Prohibited uses</p><h2>What VERITAS must not do</h2></span></div>
         <ul>
           <li>Provide legal advice or autonomously decide whether a restraint is enforceable.</li>
           <li>Call an unknown citation fabricated merely because it is outside the pilot corpus.</li>

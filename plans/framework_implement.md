@@ -135,7 +135,7 @@ Deterministic validation must confirm:
 
 Use separate model settings:
 
-- `GEMINI_CASEMAP_MODEL=gemini-3.6-flash`
+- `GEMINI_CASEMAP_MODEL=gemini-3.5-flash-lite`
 - `GEMINI_CLAIM_MODEL=gemini-3.5-flash-lite`
 - Keep `GEMINI_MODEL` temporarily as a backward-compatible fallback.
 

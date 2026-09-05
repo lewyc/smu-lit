@@ -20,7 +20,7 @@ import type {
 import { DEMO_ANSWER, savedDemoResult } from './demo'
 import { accessToken, apiUrl, dataMode } from './supabase'
 
-const CACHE_KEY = 'proofmark:last-audit'
+const CACHE_KEY = 'veritas:last-audit'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await accessToken()

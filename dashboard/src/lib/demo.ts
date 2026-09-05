@@ -153,7 +153,7 @@ export const savedDemoResult: AuditDetail = {
     landmark_set_version: 'sg-rot-lpi-landmarks-pilot-1',
     validation_status: 'benchmark-curated; legal-team sign-off required',
     retrieval_configuration: 'Exact citation-set comparison; no semantic counter-authority retrieval.',
-    independence_attestation: 'Static ProofMark reference-set comparison only; independent counter-authority retrieval is not implemented.',
+    independence_attestation: 'Static VERITAS reference-set comparison only; independent counter-authority retrieval is not implemented.',
     searched_and_not_found: [],
     confidence_band: 'unvalidated pilot',
     measured_accuracy: null,

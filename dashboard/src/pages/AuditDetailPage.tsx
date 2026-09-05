@@ -279,7 +279,7 @@ export function AuditDetailPage() {
         <section className="panel negative-findings-panel">
           <p className="eyebrow">Q4 · evidence for an absence</p>
           <h2>Completeness search disclosures</h2>
-          <p className="prompt-intro">A missing-authority prompt cannot cite an absent passage, so ProofMark discloses exactly what its bounded check searched.</p>
+          <p className="prompt-intro">A missing-authority prompt cannot cite an absent passage, so VERITAS discloses exactly what its bounded check searched.</p>
           {audit.completeness_searches!.map((search) => (
             <details key={search.landmark_set_version} open={search.searched_and_not_found.length > 0}>
               <summary><strong>{search.finding}</strong><span>{search.issue_tag.replaceAll('_', ' ')}</span></summary>

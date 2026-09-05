@@ -35,7 +35,7 @@ export function AppLayout() {
       <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
         <div className="brand-row">
           <span className="brand-mark"><Scale size={19} /></span>
-          <div><strong>ProofMark</strong><small>Legal AI assurance</small></div>
+          <div><strong>VERITAS</strong><small>Legal AI assurance</small></div>
           <button className="drawer-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={18} /></button>
         </div>
         <div className="pilot-chip">Pilot · {dataMode} mode</div>

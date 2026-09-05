@@ -51,7 +51,7 @@ export function NewAuditPage() {
       <PageHeader
         eyebrow="New assurance run"
         title="Audit an AI-generated answer"
-        description="Paste the answer exactly as produced. ProofMark will atomise its claims without rewriting the legal analysis."
+        description="Paste the answer exactly as produced. VERITAS will atomise its claims without rewriting the legal analysis."
       />
       <form className="new-audit-grid" onSubmit={submit}>
         <div className="panel editor-panel">

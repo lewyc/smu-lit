@@ -14,7 +14,7 @@ const NewAuditPage = lazy(() => import('./pages/NewAuditPage').then((module) => 
 
 export default function App() {
   return (
-    <Suspense fallback={<div className="route-loading"><span className="spinner" />Loading ProofMark…</div>}>
+    <Suspense fallback={<div className="route-loading"><span className="spinner" />Loading VERITAS…</div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<AppLayout />}>
