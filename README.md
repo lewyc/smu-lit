@@ -20,6 +20,13 @@ The dashboard runs locally. In `demo` mode it needs no account or cloud
 credentials. In `supabase` mode the browser uses Supabase Auth and the FastAPI
 service validates the signed-in user before persisting derived results.
 
+The dashboard uses same-origin `/api` requests by default. Vite proxies those
+requests to `127.0.0.1:8000` during local development, so a Cloudflare tunnel
+in front of the dashboard also reaches the API as long as FastAPI is running on
+the same host. For a separately hosted API, set `VITE_API_URL` before starting
+or building the dashboard and add the dashboard origin to
+`PROOFMARK_CORS_ORIGINS`.
+
 ## Start locally
 
 Requirements: Node.js 20+, npm, and `uv` with Python 3.12 available.
