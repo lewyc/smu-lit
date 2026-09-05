@@ -1,5 +1,5 @@
 begin;
-select plan(6);
+select plan(8);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -31,6 +31,12 @@ select throws_ok(
   'select * from public.audit_runs',
   '42501',
   'anonymous users have no table access'
+);
+
+select throws_ok(
+  'select * from public.corpus_refresh_runs',
+  '42501',
+  'anonymous users have no corpus refresh metadata access'
 );
 
 reset role;
@@ -71,6 +77,14 @@ select results_eq(
   $$ select count(*)::bigint from public.authorities $$,
   $$ select count(*)::bigint from public.authorities $$,
   'authenticated users can read the shared authority corpus'
+);
+
+select throws_ok(
+  $$ insert into public.corpus_refresh_runs (
+       profile_version, status, requested_limit
+     ) values ('test', 'queued', 1) $$,
+  '42501',
+  'authenticated browser clients cannot create corpus refreshes'
 );
 
 select * from finish();

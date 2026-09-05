@@ -10,7 +10,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.config import Settings
-from app.corpus import CORPUS_VERSION, LocalCorpusRepository
+from app.corpus import ActiveCorpusRepository, CorpusRepository, GoldFixtureCorpusRepository
 from app.models import (
     AuditDetail,
     AuditedClaim,
@@ -24,29 +24,40 @@ from app.models import (
 from app.parsers import normalise_citation, parse_with_mode
 from app.taxonomy import TAXONOMY_VERSION
 
-ENGINE_VERSION = "proofmark-rules-0.1.0"
+ENGINE_VERSION = "proofmark-rules-0.2.0"
 
 
 class EvidenceMatcher:
-    def __init__(self, corpus: LocalCorpusRepository) -> None:
+    """Pre-computes lexical passage vectors once for the active immutable snapshot."""
+
+    def __init__(self, corpus: CorpusRepository) -> None:
         self.corpus = corpus
+        self._vectors: dict[str, tuple[TfidfVectorizer, object]] = {}
+        for authority in corpus.list_authorities():
+            if authority.passages:
+                vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
+                self._vectors[authority.citation_key] = (
+                    vectorizer,
+                    vectorizer.fit_transform([passage.text for passage in authority.passages]),
+                )
 
     def rank(self, claim: ParsedClaim, authority) -> list[Evidence]:
-        passages = authority.passages
-        if not passages:
+        vector_data = self._vectors.get(authority.citation_key)
+        if not vector_data:
             return []
-        vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2))
-        matrix = vectorizer.fit_transform([passage.text for passage in passages] + [claim.text])
-        scores = cosine_similarity(matrix[-1], matrix[:-1]).flatten()
+        vectorizer, matrix = vector_data
+        scores = cosine_similarity(vectorizer.transform([claim.text]), matrix).flatten()
         evidence: list[Evidence] = []
         for index in scores.argsort()[::-1][:3]:
-            passage = passages[int(index)]
-            supports = claim.proposition in passage.supported_propositions
+            passage = authority.passages[int(index)]
+            supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {"ai_supported", "gold_fixture"}
             relation = "supports" if supports else "unresolved"
             explanation = (
-                "Stored annotation explicitly supports this proposition."
+                "Exact official paragraph selected for this controlled proposition."
+                if passage.source_provenance == "officially_sourced" and supports
+                else "Gold-fixture passage explicitly supports this controlled proposition."
                 if supports
-                else "Lexically related passage; no supporting proposition annotation."
+                else "Lexically related passage; no proposition-supported evidence was retained."
             )
             evidence.append(
                 Evidence(
@@ -57,6 +68,8 @@ class EvidenceMatcher:
                     case_name=authority.case_name,
                     official_url=authority.official_url,
                     passage=passage,
+                    officially_sourced=passage.source_provenance == "officially_sourced",
+                    ai_supported=passage.assessment_status == "ai_supported",
                 )
             )
         supporting = [item for item in evidence if item.relation == "supports"]
@@ -64,7 +77,7 @@ class EvidenceMatcher:
 
 
 class VerdictEngine:
-    def __init__(self, corpus: LocalCorpusRepository, matcher: EvidenceMatcher) -> None:
+    def __init__(self, corpus: CorpusRepository, matcher: EvidenceMatcher) -> None:
         self.corpus = corpus
         self.matcher = matcher
 
@@ -91,21 +104,20 @@ class VerdictEngine:
         if authority is None:
             negative = self.corpus.negative_check(key)
             if negative and negative.get("exists") is False:
-                rationale = (
-                    "No matching authority was found in the recorded official-registry check "
-                    f"({negative['checked_at']}, {negative['checker']})."
-                )
                 return self._result(
                     claim,
                     "likely_fabricated",
-                    rationale,
+                    (
+                        "No matching authority was found in the recorded official-registry check "
+                        f"({negative['checked_at']}, {negative['checker']})."
+                    ),
                     "Re-run the official Singapore Courts search and confirm the citation.",
                     [],
                 )
             return self._result(
                 claim,
                 "unverified",
-                "The citation cannot be resolved within the declared pilot corpus.",
+                "The citation cannot be resolved within the active immutable snapshot.",
                 "Check the citation in an official or comprehensive legal database.",
                 [],
             )
@@ -116,22 +128,18 @@ class VerdictEngine:
             return self._result(
                 claim,
                 "unsupported",
-                (
-                    f"{authority.citation} is real, but its stored annotations do not support "
-                    f"the proposition '{claim.proposition}'."
-                ),
-                "A proposition-linked passage from this or another authority is required.",
+                (f"{authority.citation} resolves to an official judgment, but no retained paragraph supports '{claim.proposition}'."),
+                "A proposition-linked paragraph from this or another authority is required.",
                 evidence,
             )
 
         if claim.overgeneralisation_terms or claim.parser_confidence < 0.6:
-            if claim.overgeneralisation_terms:
-                reason = (
-                    "The authority is relevant, but absolute wording "
-                    f"({', '.join(claim.overgeneralisation_terms)}) conflicts with its limitations."
-                )
-            else:
-                reason = "The authority is relevant, but the proposition mapping is ambiguous."
+            reason = (
+                "The authority is relevant, but absolute wording "
+                f"({', '.join(claim.overgeneralisation_terms)}) conflicts with its limitations."
+                if claim.overgeneralisation_terms
+                else "The authority is relevant, but the proposition mapping is ambiguous."
+            )
             return self._result(
                 claim,
                 "context_review",
@@ -140,13 +148,32 @@ class VerdictEngine:
                 evidence,
             )
 
+        if any(item.passage.annotation_disagrees for item in supporting):
+            return self._result(
+                claim,
+                "context_review",
+                "The official paragraph is AI-supported, but local and AI taxonomy labels disagree.",
+                "A lawyer must resolve the proposition-label disagreement against the full judgment.",
+                evidence,
+            )
+
+        if authority.source_provenance == "officially_sourced":
+            return self._result(
+                claim,
+                "context_review",
+                (
+                    "The citation and paragraph are officially sourced and AI-supported, "
+                    "but automated semantic evidence is intentionally never presented as legal certainty."
+                ),
+                "Lawyer review is required to confirm why the authority matters on these facts.",
+                evidence,
+            )
+
+        # The only pathway to verified is the separated, hand-labelled benchmark corpus.
         return self._result(
             claim,
             "verified",
-            (
-                f"{authority.citation} resolves exactly and a stored passage is explicitly "
-                f"annotated for '{claim.proposition}'."
-            ),
+            f"{authority.citation} resolves exactly to a benchmark gold passage for '{claim.proposition}'.",
             None,
             evidence,
         )
@@ -169,25 +196,12 @@ class HandoffBuilder:
         flagged = [claim for claim in claims if claim.verdict != "verified"]
         if not flagged:
             return None
-        authorities = sorted(
-            {
-                evidence.authority_citation
-                for claim in claims
-                for evidence in claim.evidence
-            }
-        )
-        established = [
-            f"Claim {claim.order}: {claim.rationale}"
-            for claim in claims
-            if claim.verdict == "verified"
-        ]
-        unresolved = [
-            f"Claim {claim.order}: {claim.missing_evidence or claim.rationale}"
-            for claim in flagged
-        ]
+        authorities = sorted({evidence.authority_citation for claim in claims for evidence in claim.evidence})
+        established = [f"Claim {claim.order}: {claim.rationale}" for claim in claims if claim.verdict == "verified"]
+        unresolved = [f"Claim {claim.order}: {claim.missing_evidence or claim.rationale}" for claim in flagged]
         return HandoffBrief(
             issue="Review non-verified claims before the answer is relied on or sent.",
-            established_points=established or ["No claim was fully verified in the pilot corpus."],
+            established_points=established or ["No claim was fully verified in this runtime snapshot."],
             relevant_authorities=authorities or ["No resolved authority for the flagged claims."],
             unresolved_questions=unresolved,
             review_status="lawyer_review_required",
@@ -195,45 +209,29 @@ class HandoffBuilder:
 
 
 class AuditEngine:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, corpus: CorpusRepository | None = None) -> None:
         self.settings = settings
-        self.corpus = LocalCorpusRepository()
+        self.corpus = corpus or ActiveCorpusRepository()
         self.verdicts = VerdictEngine(self.corpus, EvidenceMatcher(self.corpus))
+
+    def replace_corpus(self, corpus: CorpusRepository) -> None:
+        """Install warmed immutable vectors after a successful refresh."""
+        self.corpus = corpus
+        self.verdicts = VerdictEngine(corpus, EvidenceMatcher(corpus))
 
     def audit(self, submission: AuditSubmission) -> AuditDetail:
         started = time.perf_counter()
         parse_result = parse_with_mode(submission.answer, submission.parser_mode, self.settings)
         claims = [self.verdicts.classify(claim) for claim in parse_result.claims]
         counts = Counter(claim.verdict for claim in claims)
-        for verdict in (
-            "verified",
-            "context_review",
-            "unsupported",
-            "likely_fabricated",
-            "unverified",
-            "out_of_scope",
-        ):
+        for verdict in ("verified", "context_review", "unsupported", "likely_fabricated", "unverified", "out_of_scope"):
             counts.setdefault(verdict, 0)
         in_scope = [claim for claim in claims if claim.verdict != "out_of_scope"]
         cited = [claim for claim in in_scope if claim.citation]
-        resolved = [
-            claim
-            for claim in cited
-            if claim.verdict not in {"likely_fabricated", "unverified"}
-        ]
-        grounded = [
-            claim for claim in in_scope if any(item.relation == "supports" for item in claim.evidence)
-        ]
-        weighted = sum(
-            1 if claim.verdict == "verified" else 0.5 if claim.verdict == "context_review" else 0
-            for claim in in_scope
-        )
-        metrics = AuditMetrics(
-            citation_integrity=self._percent(len(resolved), len(cited)),
-            grounded_coverage=self._percent(len(grounded), len(in_scope)),
-            contextual_support=round(100 * weighted / len(in_scope), 1) if in_scope else 0,
-        )
-        duration = round((time.perf_counter() - started) * 1000, 2)
+        resolved = [claim for claim in cited if claim.verdict not in {"likely_fabricated", "unverified"}]
+        grounded = [claim for claim in in_scope if any(item.relation == "supports" for item in claim.evidence)]
+        weighted = sum(1 if claim.verdict == "verified" else 0.5 if claim.verdict == "context_review" else 0 for claim in in_scope)
+        metadata = self.corpus.get_metadata()
         return AuditDetail(
             public_id=uuid4(),
             created_at=datetime.now(UTC),
@@ -242,17 +240,21 @@ class AuditEngine:
             input_preview=submission.answer[:120],
             input_text=submission.answer,
             summary_counts=dict(counts),
-            metrics=metrics,
+            metrics=AuditMetrics(
+                citation_integrity=self._percent(len(resolved), len(cited)),
+                grounded_coverage=self._percent(len(grounded), len(in_scope)),
+                contextual_support=round(100 * weighted / len(in_scope), 1) if in_scope else 0,
+            ),
             is_saved_demo=False,
             engine_version=ENGINE_VERSION,
-            corpus_version=CORPUS_VERSION,
+            corpus_version=metadata.version,
             taxonomy_version=TAXONOMY_VERSION,
             parser_requested=submission.parser_mode,
             parser_fallback_reason=parse_result.fallback_reason,
-            processing_duration_ms=duration,
+            processing_duration_ms=round((time.perf_counter() - started) * 1000, 2),
             claims=claims,
             handoff=HandoffBuilder.build(claims),
-            source_label="Live local audit engine",
+            source_label="Live audit against warmed immutable snapshot",
         )
 
     @staticmethod
@@ -260,6 +262,8 @@ class AuditEngine:
         return round(100 * numerator / denominator, 1) if denominator else 0
 
     def benchmark(self, performance_runs: int = 250) -> BenchmarkResult:
+        # Fixtures are intentionally the only route to the 'verified' class.
+        gold_engine = AuditEngine(self.settings, GoldFixtureCorpusRepository())
         fixtures = [
             ("Employment restraints are prima facie unenforceable [2024] SGHC 29.", "verified"),
             ("A legitimate interest is required [2007] SGCA 53.", "verified"),
@@ -269,20 +273,23 @@ class AuditEngine:
             ("A two-year rule exists [2099] SGCA 999.", "likely_fabricated"),
             ("The PDPA permits publication of personal data.", "out_of_scope"),
         ]
-        correct = 0
-        for text, expected in fixtures:
-            detail = self.audit(AuditSubmission(answer=text, parser_mode="local"))
-            correct += int(detail.claims[0].verdict == expected)
+        correct = sum(
+            int(gold_engine.audit(AuditSubmission(answer=text, parser_mode="local")).claims[0].verdict == expected)
+            for text, expected in fixtures
+        )
         latencies: list[float] = []
         errors = 0
         perf_input = AuditSubmission(answer=fixtures[0][0], parser_mode="local")
         for _ in range(performance_runs):
             try:
-                latencies.append(self.audit(perf_input).processing_duration_ms)
+                latencies.append(gold_engine.audit(perf_input).processing_duration_ms)
             except Exception:
                 errors += 1
         ordered = sorted(latencies)
         p95_index = max(0, min(len(ordered) - 1, round(0.95 * len(ordered)) - 1))
+        authorities = self.corpus.list_authorities()
+        passages = [passage for authority in authorities for passage in authority.passages]
+        officially_sourced = [item for item in authorities if item.source_provenance == "officially_sourced"]
         return BenchmarkResult(
             fixture_count=len(fixtures),
             correct_count=correct,
@@ -292,5 +299,11 @@ class AuditEngine:
             performance_runs=performance_runs,
             error_count=errors,
             engine_version=ENGINE_VERSION,
-            corpus_version=CORPUS_VERSION,
+            corpus_version=self.corpus.get_metadata().version,
+            source_provenance_rate=self._percent(len(officially_sourced), len(authorities)),
+            citation_heading_match_rate=self._percent(
+                len([item for item in officially_sourced if item.document_hash]), len(officially_sourced)
+            ),
+            annotation_disagreement_rate=self._percent(len([item for item in passages if item.annotation_disagrees]), len(passages)),
+            coverage=self.corpus.get_metadata().coverage,
         )

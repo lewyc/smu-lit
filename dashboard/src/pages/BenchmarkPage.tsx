@@ -41,10 +41,21 @@ export function BenchmarkPage() {
             <div className="metric-card"><span>P50 latency</span><strong>{result.p50_latency_ms} ms</strong><small>Median after corpus warm-up</small></div>
             <div className="metric-card"><span>P95 latency</span><strong>{result.p95_latency_ms} ms</strong><small>Target &lt; 1,500 ms</small></div>
             <div className="metric-card"><span>Performance runs</span><strong>{result.performance_runs}</strong><small>{result.error_count} errors</small></div>
+            <div className="metric-card"><span>Official-source rate</span><strong>{result.source_provenance_rate}%</strong><small>Active snapshot authorities</small></div>
+            <div className="metric-card"><span>Heading-match rate</span><strong>{result.citation_heading_match_rate}%</strong><small>Validated source headings</small></div>
+            <div className="metric-card"><span>Annotation disagreement</span><strong>{result.annotation_disagreement_rate}%</strong><small>Forced to context review</small></div>
           </div>
           <div className="panel benchmark-proof">
             <Gauge size={22} />
             <div><p className="eyebrow">Measured, not claimed</p><h2>Version-pinned evidence</h2><p>Engine {result.engine_version} · corpus {result.corpus_version}</p></div>
+          </div>
+          <div className="panel coverage-panel">
+            <p className="eyebrow">Snapshot coverage</p><h2>Source coverage matrix</h2>
+            {result.coverage.length ? (
+              <div className="coverage-table">
+                {result.coverage.map((cell) => <div key={[cell.court, cell.decision_year_band, cell.proposition, cell.outcome_direction].join('-')}><span>{cell.court} · {cell.decision_year_band}</span><strong>{cell.proposition.replaceAll('_', ' ')}</strong><small>{cell.outcome_direction.replaceAll('_', ' ')} · {cell.passage_count} passage{cell.passage_count === 1 ? '' : 's'}</small></div>)}
+              </div>
+            ) : <p className="metric-note">Run an official refresh to populate coverage; gold fixtures remain separate from the active snapshot.</p>}
           </div>
         </>
       ) : <div className="panel empty-state benchmark-empty">Run the fixed pack to generate current-machine evidence for the pitch.</div>}

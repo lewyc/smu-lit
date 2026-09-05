@@ -18,12 +18,8 @@ class Settings(BaseSettings):
     )
     supabase_secret_key: str = Field(default="", validation_alias="SUPABASE_SECRET_KEY")
     gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
-    gemini_model: str = Field(
-        default="gemini-3.5-flash-lite", validation_alias="GEMINI_MODEL"
-    )
-    gemini_timeout_seconds: float = Field(
-        default=8.0, validation_alias="GEMINI_TIMEOUT_SECONDS"
-    )
+    gemini_model: str = Field(default="gemini-3.5-flash-lite", validation_alias="GEMINI_MODEL")
+    gemini_timeout_seconds: float = Field(default=8.0, validation_alias="GEMINI_TIMEOUT_SECONDS")
 
     @property
     def cors_origin_list(self) -> list[str]:

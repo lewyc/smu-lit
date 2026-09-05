@@ -17,6 +17,15 @@ AuditVerdict = Literal[
     "out_of_scope",
 ]
 EvidenceRelation = Literal["supports", "limits", "contradicts", "unresolved"]
+SourceProvenance = Literal["officially_sourced", "gold_fixture", "rejected"]
+AssessmentStatus = Literal["ai_supported", "gold_fixture", "unannotated", "rejected"]
+OutcomeDirection = Literal[
+    "supports_enforcement",
+    "limits_enforcement",
+    "mixed",
+    "unknown",
+]
+RefreshStatus = Literal["queued", "running", "complete", "failed", "fallback"]
 
 
 class Passage(BaseModel):
@@ -25,6 +34,12 @@ class Passage(BaseModel):
     text: str
     supported_propositions: list[str]
     limitations: list[str] = Field(default_factory=list)
+    source_provenance: SourceProvenance = "gold_fixture"
+    assessment_status: AssessmentStatus = "gold_fixture"
+    annotation_confidence: float | None = Field(default=None, ge=0, le=1)
+    annotation_model: str | None = None
+    outcome_direction: OutcomeDirection = "unknown"
+    annotation_disagrees: bool = False
 
 
 class Authority(BaseModel):
@@ -35,8 +50,23 @@ class Authority(BaseModel):
     court: str
     decision_date: date
     official_url: str
-    source_status: Literal["research_verified", "verification_required"]
+    source_status: str = "gold_fixture"
+    source_provenance: SourceProvenance = "gold_fixture"
+    assessment_status: AssessmentStatus = "gold_fixture"
+    source_host: str | None = None
+    discovery_query: str | None = None
+    retrieved_at: datetime | None = None
+    document_hash: str | None = None
+    extractor_version: str | None = None
     passages: list[Passage]
+
+
+class CoverageCell(BaseModel):
+    court: str
+    decision_year_band: str
+    proposition: str
+    outcome_direction: OutcomeDirection
+    passage_count: int
 
 
 class CorpusMetadata(BaseModel):
@@ -45,8 +75,35 @@ class CorpusMetadata(BaseModel):
     jurisdiction: str
     scope_statement: str
     content_hash: str
-    source_status: Literal["research_verified", "verification_required"]
+    source_status: str = "gold_fixture"
     limitations: list[str]
+    active: bool = True
+    snapshot_created_at: datetime | None = None
+    authority_count: int = 0
+    passage_count: int = 0
+    profile_version: str | None = None
+    is_cached: bool = False
+    coverage: list[CoverageCell] = Field(default_factory=list)
+
+
+class RefreshRun(BaseModel):
+    public_id: UUID
+    status: RefreshStatus
+    source_connector: str = "SGCourtsConnector"
+    profile_version: str
+    requested_limit: int = Field(ge=1, le=25)
+    accepted_documents: int = 0
+    rejected_documents: int = 0
+    accepted_passages: int = 0
+    fallback_reason: str | None = None
+    active_corpus_version: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    duration_ms: float | None = None
+
+
+class CorpusRefreshRequest(BaseModel):
+    limit: int = Field(default=25, ge=1, le=25)
 
 
 class ParsedClaim(BaseModel):
@@ -82,6 +139,8 @@ class Evidence(BaseModel):
     case_name: str
     official_url: str
     passage: Passage
+    officially_sourced: bool = False
+    ai_supported: bool = False
 
 
 class AuditedClaim(ParsedClaim):
@@ -146,6 +205,10 @@ class BenchmarkResult(BaseModel):
     error_count: int
     engine_version: str
     corpus_version: str
+    source_provenance_rate: float = 0
+    citation_heading_match_rate: float = 0
+    annotation_disagreement_rate: float = 0
+    coverage: list[CoverageCell] = Field(default_factory=list)
 
 
 class HealthResponse(BaseModel):

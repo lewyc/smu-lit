@@ -1,12 +1,54 @@
+from pathlib import Path
+
 from app.config import Settings
-from app.corpus import AUTHORITIES, DEMO_ANSWER
+from app.corpus import (
+    AUTHORITIES,
+    ActiveCorpusRepository,
+    GoldFixtureCorpusRepository,
+)
 from app.engine import AuditEngine
-from app.models import AuditSubmission
+from app.models import AuditSubmission, Authority, Passage
 from app.parsers import LocalClaimParser, normalise_citation
 
 
-def engine() -> AuditEngine:
-    return AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"))
+def gold_engine() -> AuditEngine:
+    return AuditEngine(
+        Settings(PROOFMARK_DATA_MODE="demo"),
+        GoldFixtureCorpusRepository(),
+    )
+
+
+def automated_engine(snapshot_path: Path) -> AuditEngine:
+    corpus = ActiveCorpusRepository(snapshot_path)
+    corpus.activate(
+        [
+            Authority(
+                id="auto-2025",
+                citation="[2025] SGHC 101",
+                citation_key="2025SGHC101",
+                case_name="Automatic Example Pte Ltd v Employee",
+                court="Singapore HC",
+                decision_date="2025-01-01",
+                official_url="https://www.elitigation.sg/gd/s/2025_SGHC_101",
+                source_status="officially_sourced",
+                source_provenance="officially_sourced",
+                assessment_status="ai_supported",
+                document_hash="a" * 64,
+                passages=[
+                    Passage(
+                        id="auto-1",
+                        paragraph_label="[1]",
+                        text="An employer must establish a legitimate proprietary interest.",
+                        supported_propositions=["legitimate_proprietary_interest"],
+                        source_provenance="officially_sourced",
+                        assessment_status="ai_supported",
+                        annotation_confidence=0.9,
+                    )
+                ],
+            )
+        ]
+    )
+    return AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
 
 
 def test_neutral_citation_normalisation_is_tolerant() -> None:
@@ -15,48 +57,68 @@ def test_neutral_citation_normalisation_is_tolerant() -> None:
 
 
 def test_local_parser_extracts_multiple_claims_and_pinpoints() -> None:
-    claims = LocalClaimParser().parse(DEMO_ANSWER)
-    assert len(claims) == 7
+    text = (
+        "A restraint is prima facie unenforceable [2024] SGHC 29 at [18].\nAll non-competes are automatically void [2019] SGHC 96 at [82]."
+    )
+    claims = LocalClaimParser().parse(text)
+    assert len(claims) == 2
     assert claims[0].citation == "[2024] SGHC 29"
     assert claims[0].pinpoint == "[18]"
-    assert claims[2].overgeneralisation_terms == ["automatically", "all non-competes"]
+    assert claims[1].overgeneralisation_terms == ["automatically", "all non-competes"]
 
 
-def test_all_seeded_authorities_resolve_exactly() -> None:
-    corpus = engine().corpus
+def test_all_gold_authorities_resolve_exactly() -> None:
+    corpus = GoldFixtureCorpusRepository()
     assert all(corpus.resolve(authority.citation_key) for authority in AUTHORITIES)
 
 
-def test_demo_answer_exercises_expected_verdicts() -> None:
-    audit = engine().audit(AuditSubmission(answer=DEMO_ANSWER, parser_mode="local"))
-    assert [claim.verdict for claim in audit.claims] == [
-        "verified",
-        "verified",
-        "context_review",
-        "context_review",
-        "unsupported",
-        "likely_fabricated",
-        "out_of_scope",
+def test_gold_fixture_pack_exercises_expected_verdicts() -> None:
+    engine = gold_engine()
+    answers = [
+        ("Employment restraints are prima facie unenforceable [2024] SGHC 29.", "verified"),
+        ("A legitimate interest is required [2007] SGCA 53.", "verified"),
+        ("All worldwide restraints are automatically void [2019] SGHC 96.", "context_review"),
+        ("Singapore-wide restraints are always unreasonable [2010] SGCA 3.", "context_review"),
+        ("Confidential information is always misused.", "unsupported"),
+        ("A two-year rule exists [2099] SGCA 999.", "likely_fabricated"),
+        ("The PDPA permits publication of personal data.", "out_of_scope"),
     ]
-    assert audit.handoff is not None
-    assert audit.handoff.review_status == "lawyer_review_required"
+    assert [engine.audit(AuditSubmission(answer=text, parser_mode="local")).claims[0].verdict for text, _ in answers] == [
+        expected for _, expected in answers
+    ]
+
+
+def test_automatically_sourced_evidence_can_never_be_verified(tmp_path: Path) -> None:
+    audit = automated_engine(tmp_path / "snapshot.json").audit(
+        AuditSubmission(
+            answer="A legitimate interest is required [2025] SGHC 101.",
+            parser_mode="local",
+        )
+    )
+    claim = audit.claims[0]
+    assert claim.verdict == "context_review"
+    assert claim.evidence[0].officially_sourced
+    assert claim.evidence[0].ai_supported
 
 
 def test_unknown_citation_is_not_called_fabricated_without_negative_check() -> None:
-    audit = engine().audit(
-        AuditSubmission(answer="A restraint is invalid [2025] SGHC 999.", parser_mode="local")
-    )
+    audit = gold_engine().audit(AuditSubmission(answer="A restraint is invalid [2025] SGHC 999.", parser_mode="local"))
     assert audit.claims[0].verdict == "unverified"
 
 
-def test_gemini_absence_falls_back_without_changing_verdicts() -> None:
-    audit = engine().audit(AuditSubmission(answer=DEMO_ANSWER, parser_mode="auto"))
+def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> None:
+    audit = gold_engine().audit(
+        AuditSubmission(
+            answer="A legitimate interest is required [2007] SGCA 53.",
+            parser_mode="auto",
+        )
+    )
     assert audit.parser_used == "local"
     assert "not configured" in (audit.parser_fallback_reason or "")
     assert audit.claims[0].verdict == "verified"
 
 
 def test_benchmark_fixture_pack_is_exact() -> None:
-    result = engine().benchmark(performance_runs=3)
+    result = gold_engine().benchmark(performance_runs=3)
     assert result.fixture_accuracy == 100
     assert result.error_count == 0

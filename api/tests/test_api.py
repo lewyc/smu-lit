@@ -27,4 +27,14 @@ def test_audit_can_be_retrieved_in_demo_mode() -> None:
     public_id = created.json()["public_id"]
     fetched = client.get(f"/api/v1/audits/{public_id}")
     assert fetched.status_code == 200
-    assert fetched.json()["claims"][0]["verdict"] == "verified"
+    assert fetched.json()["claims"][0]["verdict"] == "unverified"
+
+
+def test_refresh_endpoint_is_bounded_and_exposes_progress() -> None:
+    response = client.post("/api/v1/corpora/refresh", json={"limit": 1})
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["requested_limit"] == 1
+    assert payload["status"] in {"queued", "running"}
+    latest = client.get("/api/v1/corpora/refreshes/latest")
+    assert latest.status_code == 200

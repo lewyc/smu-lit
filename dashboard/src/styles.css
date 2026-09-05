@@ -240,6 +240,18 @@ select { padding: 8px 30px 8px 10px; font-size: .8rem; }
 .passage-card > small { display: block; margin-top: 9px; color: #8a5519; line-height: 1.4; }
 .tag-row { display: flex; flex-wrap: wrap; gap: 5px; }
 .tag-row span { padding: 4px 6px; border-radius: 4px; background: var(--teal-soft); color: #006b65; font-size: .6rem; }
+.source-badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.source-badge { display: inline-flex; align-items: center; min-height: 21px; padding: 2px 7px; border: 1px solid transparent; border-radius: 999px; font-size: .61rem; font-weight: 750; line-height: 1.15; }
+.source-badge.official { border-color: #9edbd5; color: #006b65; background: var(--teal-soft); }
+.source-badge.ai { border-color: #bcd0ee; color: #275a96; background: #eef5ff; }
+.source-badge.gold { border-color: #d8dee5; color: #526174; background: #f4f6f8; }
+.source-badge.muted { border-color: #d8dee5; color: var(--grey-700); background: #f4f6f8; }
+.source-badge.warning { border-color: #efc47d; color: #8a5519; background: var(--amber-soft); }
+.evidence-badges { margin: 12px 0 4px; }
+.refresh-banner { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 17px; padding: 13px 16px; border: 1px solid #bcd0ee; border-left: 4px solid var(--blue); border-radius: 7px; background: #f5f9ff; color: var(--grey-700); font-size: .78rem; }
+.refresh-banner svg { flex: none; color: var(--blue); }
+.refresh-banner p { margin: 2px 0 0; }
+.spin { animation: spin .75s linear infinite; }
 
 .benchmark-explainer { display: flex; align-items: flex-start; gap: 12px; padding: 17px; margin-bottom: 17px; }
 .benchmark-explainer svg { flex: none; color: var(--teal); }
@@ -249,6 +261,11 @@ select { padding: 8px 30px 8px 10px; font-size: .8rem; }
 .benchmark-proof svg { color: var(--teal); }
 .benchmark-proof p:last-child { margin: 0; color: var(--grey-500); font-size: .75rem; }
 .benchmark-empty { min-height: 210px; }
+.coverage-panel { margin-top: 17px; padding: 20px; }
+.coverage-table { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-top: 14px; }
+.coverage-table > div { display: grid; gap: 4px; padding: 11px; border: 1px solid var(--grey-200); border-radius: 6px; background: #fafcfd; }
+.coverage-table span, .coverage-table small { color: var(--grey-500); font-size: .67rem; }
+.coverage-table strong { color: var(--navy); font-size: .73rem; }
 
 .assurance-hero { display: grid; grid-template-columns: 1.25fr 1fr; overflow: hidden; margin-bottom: 17px; border-radius: 10px; color: white; background: var(--navy); }
 .assurance-hero > div:first-child { padding: 34px; }

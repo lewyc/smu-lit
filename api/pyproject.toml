@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Deterministic legal citation assurance engine for the ProofMark pilot"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "beautifulsoup4==4.13.4",
   "fastapi==0.116.1",
   "google-genai==1.31.0",
+  "httpx==0.28.1",
   "pydantic-settings==2.10.1",
   "scikit-learn==1.7.1",
   "supabase==2.18.1",
@@ -13,7 +15,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["httpx==0.28.1", "pytest==8.4.1", "ruff==0.12.10"]
+dev = ["pytest==8.4.1", "ruff==0.12.10"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

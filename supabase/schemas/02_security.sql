@@ -4,6 +4,7 @@ alter table public.authority_corpora enable row level security;
 alter table public.authorities enable row level security;
 alter table public.authority_passages enable row level security;
 alter table public.citation_registry_checks enable row level security;
+alter table public.corpus_refresh_runs enable row level security;
 alter table public.audit_runs enable row level security;
 alter table public.audit_claims enable row level security;
 alter table public.claim_evidence enable row level security;
@@ -17,6 +18,7 @@ revoke all on table public.authority_corpora from anon, authenticated;
 revoke all on table public.authorities from anon, authenticated;
 revoke all on table public.authority_passages from anon, authenticated;
 revoke all on table public.citation_registry_checks from anon, authenticated;
+revoke all on table public.corpus_refresh_runs from anon, authenticated;
 revoke all on table public.audit_runs from anon, authenticated;
 revoke all on table public.audit_claims from anon, authenticated;
 revoke all on table public.claim_evidence from anon, authenticated;
@@ -30,6 +32,7 @@ grant select on table public.authority_corpora to authenticated;
 grant select on table public.authorities to authenticated;
 grant select on table public.authority_passages to authenticated;
 grant select on table public.citation_registry_checks to authenticated;
+grant select on table public.corpus_refresh_runs to authenticated;
 grant select on table public.audit_runs to authenticated;
 grant select on table public.audit_claims to authenticated;
 grant select on table public.claim_evidence to authenticated;
@@ -64,6 +67,9 @@ create policy authority_passages_authenticated_read on public.authority_passages
   for select to authenticated using (true);
 
 create policy citation_checks_authenticated_read on public.citation_registry_checks
+  for select to authenticated using (true);
+
+create policy corpus_refresh_runs_authenticated_read on public.corpus_refresh_runs
   for select to authenticated using (true);
 
 create policy audit_runs_member_read on public.audit_runs

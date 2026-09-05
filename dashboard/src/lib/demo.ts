@@ -67,8 +67,10 @@ function claim(order: number): AuditedClaim {
           : order === 2
             ? 'https://www.elitigation.sg/gdviewer/s/2007_SGCA_53'
             : order === 3
-              ? 'https://www.elitigation.sg/gdviewer/s/2019_SGHC_96'
-              : 'https://www.elitigation.sg/gd/s/2010_SGCA_3',
+            ? 'https://www.elitigation.sg/gdviewer/s/2019_SGHC_96'
+            : 'https://www.elitigation.sg/gd/s/2010_SGCA_3',
+        officially_sourced: false,
+        ai_supported: false,
         passage: {
           id: `demo-${order}`,
           paragraph_label: order === 1 ? '[18]' : order === 2 ? '[70]' : order === 3 ? '[82]-[84]' : '[59]-[60]',

@@ -23,7 +23,10 @@ create table public.authority_corpora (
   name text not null,
   scope_statement text not null,
   content_hash text not null check (length(content_hash) = 64),
-  source_status text not null check (source_status in ('research_verified', 'verification_required')),
+  source_status text not null check (source_status in ('gold_fixture', 'officially_sourced')),
+  profile_version text,
+  refresh_run_id bigint,
+  snapshot_created_at timestamptz,
   is_active boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -40,7 +43,13 @@ create table public.authorities (
   court text not null,
   decision_date date not null,
   official_url text not null check (official_url like 'https://%'),
-  source_status text not null check (source_status in ('research_verified', 'verification_required')),
+  source_status text not null check (source_status in ('gold_fixture', 'officially_sourced', 'rejected')),
+  assessment_status text not null check (assessment_status in ('gold_fixture', 'ai_supported', 'unannotated', 'rejected')),
+  source_host text,
+  discovery_query text,
+  retrieved_at timestamptz,
+  document_hash text check (document_hash is null or length(document_hash) = 64),
+  extractor_version text,
   created_at timestamptz not null default now(),
   unique (corpus_id, normalised_citation_key)
 );
@@ -53,6 +62,17 @@ create table public.authority_passages (
   passage_text text not null,
   supported_propositions text[] not null default '{}',
   limitations text[] not null default '{}',
+  source_provenance text not null check (source_provenance in ('officially_sourced', 'gold_fixture', 'rejected')),
+  assessment_status text not null check (assessment_status in ('gold_fixture', 'ai_supported', 'unannotated', 'rejected')),
+  annotation_model text,
+  annotation_version text,
+  annotation_confidence numeric(4, 3) check (annotation_confidence is null or annotation_confidence between 0 and 1),
+  outcome_direction text not null default 'unknown' check (
+    outcome_direction in ('supports_enforcement', 'limits_enforcement', 'mixed', 'unknown')
+  ),
+  local_proposition text,
+  annotation_disagrees boolean not null default false,
+  source_text_hash text check (source_text_hash is null or length(source_text_hash) = 64),
   search_vector tsvector generated always as (
     to_tsvector('english', coalesce(passage_text, '') || ' ' || coalesce(paragraph_label, ''))
   ) stored,
@@ -73,6 +93,29 @@ create table public.citation_registry_checks (
   created_at timestamptz not null default now(),
   unique (corpus_id, normalised_citation_key, checked_at)
 );
+
+create table public.corpus_refresh_runs (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  requested_by uuid references auth.users(id) on delete set null,
+  source_connector text not null default 'SGCourtsConnector',
+  profile_version text not null,
+  status text not null check (status in ('queued', 'running', 'complete', 'failed', 'fallback')),
+  requested_limit bigint not null check (requested_limit between 1 and 25),
+  accepted_documents bigint not null default 0 check (accepted_documents >= 0),
+  rejected_documents bigint not null default 0 check (rejected_documents >= 0),
+  accepted_passages bigint not null default 0 check (accepted_passages >= 0),
+  fallback_reason text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  duration_ms numeric(12, 3) check (duration_ms is null or duration_ms >= 0),
+  created_at timestamptz not null default now(),
+  check (status not in ('complete', 'fallback') or completed_at is not null)
+);
+
+alter table public.authority_corpora
+  add constraint authority_corpora_refresh_run_id_fkey
+  foreign key (refresh_run_id) references public.corpus_refresh_runs(id) on delete restrict;
 
 create table public.audit_runs (
   id bigint generated always as identity primary key,
@@ -166,9 +209,15 @@ create table public.benchmark_runs (
 create index organisation_members_user_id_idx on public.organisation_members (user_id);
 create index organisation_members_organisation_id_idx on public.organisation_members (organisation_id);
 create index authorities_corpus_id_idx on public.authorities (corpus_id);
+create index authority_corpora_refresh_run_id_idx on public.authority_corpora (refresh_run_id)
+  where refresh_run_id is not null;
 create index authority_passages_authority_id_idx on public.authority_passages (authority_id);
 create index authority_passages_search_idx on public.authority_passages using gin (search_vector);
 create index citation_registry_checks_corpus_id_idx on public.citation_registry_checks (corpus_id);
+create index corpus_refresh_runs_status_idx on public.corpus_refresh_runs (created_at desc)
+  where status in ('queued', 'running');
+create index corpus_refresh_runs_requested_by_idx on public.corpus_refresh_runs (requested_by)
+  where requested_by is not null;
 create index audit_runs_created_by_idx on public.audit_runs (created_by);
 create index audit_runs_org_created_idx on public.audit_runs (organisation_id, created_at desc);
 create index audit_runs_active_idx on public.audit_runs (created_at)

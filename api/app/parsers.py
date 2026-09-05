@@ -87,9 +87,7 @@ class GeminiClaimParser:
         )
         client = genai.Client(
             api_key=self.settings.gemini_api_key,
-            http_options=types.HttpOptions(
-                timeout=int(self.settings.gemini_timeout_seconds * 1000)
-            ),
+            http_options=types.HttpOptions(timeout=int(self.settings.gemini_timeout_seconds * 1000)),
         )
         response = client.models.generate_content(
             model=self.settings.gemini_model,

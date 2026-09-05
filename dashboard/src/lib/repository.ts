@@ -6,6 +6,8 @@ import type {
   AuditSummary,
   Authority,
   BenchmarkResult,
+  CorpusMetadata,
+  RefreshRun,
 } from '../types'
 import { DEMO_ANSWER, savedDemoResult } from './demo'
 import { accessToken, apiUrl, dataMode } from './supabase'
@@ -90,6 +92,23 @@ export class ApiAuditRepository implements AuditRepository {
 
   listAuthorities(): Promise<Authority[]> {
     return request('/api/v1/authorities')
+  }
+
+  async getCorpus(): Promise<CorpusMetadata> {
+    const corpora = await request<CorpusMetadata[]>('/api/v1/corpora')
+    if (!corpora[0]) throw new Error('No active corpus metadata is available')
+    return corpora[0]
+  }
+
+  startCorpusRefresh(): Promise<RefreshRun> {
+    return request('/api/v1/corpora/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ limit: 25 }),
+    })
+  }
+
+  getLatestCorpusRefresh(): Promise<RefreshRun | null> {
+    return request('/api/v1/corpora/refreshes/latest')
   }
 
   async loadDemoAnswer(): Promise<string> {

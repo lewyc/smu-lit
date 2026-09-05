@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
 from app.config import Settings
-from app.models import AuditDetail, AuditSummary
+from app.corpus import ActiveCorpusRepository
+from app.models import AuditDetail, AuditSummary, RefreshRun
 
 
 class AuditRepository(Protocol):
@@ -44,13 +46,7 @@ class SupabaseAuditRepository:
         if not auth_response.user:
             raise PermissionError("Invalid Supabase bearer token")
         self.user_id = str(auth_response.user.id)
-        membership = (
-            self.client.table("organisation_members")
-            .select("organisation_id")
-            .eq("user_id", self.user_id)
-            .limit(1)
-            .execute()
-        )
+        membership = self.client.table("organisation_members").select("organisation_id").eq("user_id", self.user_id).limit(1).execute()
         if not membership.data:
             raise PermissionError("The signed-in user has no ProofMark organisation")
         self.organisation_id = membership.data[0]["organisation_id"]
@@ -92,10 +88,7 @@ class SupabaseAuditRepository:
                 }
             )
         claim_response = self.client.table("audit_claims").insert(claim_rows).execute()
-        claim_ids = {
-            row["claim_order"]: row["id"]
-            for row in claim_response.data
-        }
+        claim_ids = {row["claim_order"]: row["id"] for row in claim_response.data}
         evidence_rows = []
         for claim in audit.claims:
             for evidence in claim.evidence:
@@ -155,7 +148,80 @@ class SupabaseAuditRepository:
             .limit(100)
             .execute()
         )
-        return [
-            AuditSummary(**AuditDetail.model_validate(row["result_payload"]).model_dump())
-            for row in response.data
-        ]
+        return [AuditSummary(**AuditDetail.model_validate(row["result_payload"]).model_dump()) for row in response.data]
+
+
+class SupabaseCorpusRefreshRepository:
+    """Server-side snapshot persistence; never instantiated by the dashboard."""
+
+    def __init__(self, settings: Settings, bearer_token: str) -> None:
+        audit_repository = SupabaseAuditRepository(settings, bearer_token)
+        self.client = audit_repository.client
+        self.user_id = audit_repository.user_id
+        self._row_ids: dict[UUID, int] = {}
+
+    def create(self, run: RefreshRun) -> None:
+        response = (
+            self.client.table("corpus_refresh_runs")
+            .insert(
+                {
+                    "public_id": str(run.public_id),
+                    "requested_by": self.user_id,
+                    "source_connector": run.source_connector,
+                    "profile_version": run.profile_version,
+                    "status": "running",
+                    "requested_limit": run.requested_limit,
+                    "started_at": (run.started_at or datetime.now(UTC)).isoformat(),
+                }
+            )
+            .execute()
+        )
+        self._row_ids[run.public_id] = response.data[0]["id"]
+
+    def finish(self, run: RefreshRun, corpus: ActiveCorpusRepository | None = None) -> None:
+        row_id = self._row_ids.get(run.public_id)
+        if row_id is None:
+            lookup = self.client.table("corpus_refresh_runs").select("id").eq("public_id", str(run.public_id)).maybe_single().execute()
+            if not lookup.data:
+                return
+            row_id = lookup.data["id"]
+        if run.status == "complete" and corpus is not None:
+            metadata = corpus.get_metadata()
+            self.client.rpc(
+                "activate_official_corpus_snapshot",
+                {
+                    "p_version": metadata.version,
+                    "p_name": metadata.name,
+                    "p_scope_statement": metadata.scope_statement,
+                    "p_content_hash": metadata.content_hash,
+                    "p_profile_version": metadata.profile_version,
+                    "p_snapshot_created_at": (metadata.snapshot_created_at.isoformat() if metadata.snapshot_created_at else None),
+                    "p_refresh_run_id": row_id,
+                    "p_authorities": [authority.model_dump(mode="json") for authority in corpus.list_authorities()],
+                },
+            ).execute()
+        self.client.table("corpus_refresh_runs").update(
+            {
+                "status": run.status,
+                "accepted_documents": run.accepted_documents,
+                "rejected_documents": run.rejected_documents,
+                "accepted_passages": run.accepted_passages,
+                "fallback_reason": run.fallback_reason,
+                "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+                "duration_ms": run.duration_ms,
+            }
+        ).eq("id", row_id).execute()
+
+    def latest(self) -> RefreshRun | None:
+        response = (
+            self.client.table("corpus_refresh_runs")
+            .select(
+                "public_id,status,source_connector,profile_version,requested_limit,"
+                "accepted_documents,rejected_documents,accepted_passages,fallback_reason,"
+                "started_at,completed_at,duration_ms"
+            )
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return RefreshRun.model_validate(response.data[0]) if response.data else None

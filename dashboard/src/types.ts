@@ -16,6 +16,12 @@ export interface Passage {
   text: string
   supported_propositions: string[]
   limitations: string[]
+  source_provenance?: 'officially_sourced' | 'gold_fixture' | 'rejected'
+  assessment_status?: 'ai_supported' | 'gold_fixture' | 'unannotated' | 'rejected'
+  annotation_confidence?: number | null
+  annotation_model?: string | null
+  outcome_direction?: 'supports_enforcement' | 'limits_enforcement' | 'mixed' | 'unknown'
+  annotation_disagrees?: boolean
 }
 
 export interface Authority {
@@ -26,7 +32,14 @@ export interface Authority {
   court: string
   decision_date: string
   official_url: string
-  source_status: 'research_verified' | 'verification_required'
+  source_status: string
+  source_provenance?: 'officially_sourced' | 'gold_fixture' | 'rejected'
+  assessment_status?: 'ai_supported' | 'gold_fixture' | 'unannotated' | 'rejected'
+  source_host?: string | null
+  discovery_query?: string | null
+  retrieved_at?: string | null
+  document_hash?: string | null
+  extractor_version?: string | null
   passages: Passage[]
 }
 
@@ -38,6 +51,8 @@ export interface Evidence {
   case_name: string
   official_url: string
   passage: Passage
+  officially_sourced: boolean
+  ai_supported: boolean
 }
 
 export interface AuditedClaim {
@@ -113,6 +128,51 @@ export interface BenchmarkResult {
   error_count: number
   engine_version: string
   corpus_version: string
+  source_provenance_rate: number
+  citation_heading_match_rate: number
+  annotation_disagreement_rate: number
+  coverage: CoverageCell[]
+}
+
+export interface CoverageCell {
+  court: string
+  decision_year_band: string
+  proposition: string
+  outcome_direction: 'supports_enforcement' | 'limits_enforcement' | 'mixed' | 'unknown'
+  passage_count: number
+}
+
+export interface CorpusMetadata {
+  version: string
+  name: string
+  jurisdiction: string
+  scope_statement: string
+  content_hash: string
+  source_status: string
+  limitations: string[]
+  active: boolean
+  snapshot_created_at: string | null
+  authority_count: number
+  passage_count: number
+  profile_version: string | null
+  is_cached: boolean
+  coverage: CoverageCell[]
+}
+
+export interface RefreshRun {
+  public_id: string
+  status: 'queued' | 'running' | 'complete' | 'failed' | 'fallback'
+  source_connector: string
+  profile_version: string
+  requested_limit: number
+  accepted_documents: number
+  rejected_documents: number
+  accepted_passages: number
+  fallback_reason: string | null
+  active_corpus_version: string | null
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
 }
 
 export interface AuditRepository {
@@ -121,5 +181,8 @@ export interface AuditRepository {
   submitAudit(input: AuditSubmission): Promise<AuditDetail>
   runBenchmark(): Promise<BenchmarkResult>
   listAuthorities(): Promise<Authority[]>
+  getCorpus(): Promise<CorpusMetadata>
+  startCorpusRefresh(): Promise<RefreshRun>
+  getLatestCorpusRefresh(): Promise<RefreshRun | null>
   loadDemoAnswer(): Promise<string>
 }

@@ -1,9 +1,12 @@
 import { ArrowRight, Ban, CheckCircle2, Database, Scale, ServerCog, ShieldCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { PageHeader } from '../components/Common'
+import { auditRepository } from '../lib/repository'
+import type { CorpusMetadata } from '../types'
 
 const current = [
   'Synchronous local FastAPI engine',
-  'Versioned four-decision pilot corpus',
+  'Immutable official-judgment snapshot with cached fallback',
   'Exact neutral-citation resolution',
   'TF-IDF passage navigation',
   'Optional Gemini claim structuring',
@@ -12,13 +15,20 @@ const current = [
 
 const future = [
   'Supabase Queues and stateless workers',
-  'Curator-approved judgment ingestion',
+  'PGMQ-backed stateless official-judgment refresh workers',
   'Hybrid lexical and pgvector retrieval',
   'Organisation administration and audit exports',
   'Drift monitoring and larger legal benchmark sets',
+  'LicensedSourceConnector for SAL/SLR/LawNet where tenant licensing permits',
 ]
 
 export function AssurancePage() {
+  const [corpus, setCorpus] = useState<CorpusMetadata | null>(null)
+
+  useEffect(() => {
+    auditRepository.getCorpus().then(setCorpus).catch(() => undefined)
+  }, [])
+
   return (
     <section className="page">
       <PageHeader
@@ -44,10 +54,13 @@ export function AssurancePage() {
         <div className="boundary-grid">
           <div><strong>Jurisdiction</strong><span>Singapore</span></div>
           <div><strong>Practice area</strong><span>Employment restraints of trade</span></div>
-          <div><strong>Corpus</strong><span>Four selected decisions</span></div>
+          <div><strong>Corpus</strong><span>{corpus ? corpus.authority_count + ' official judgments · ' + corpus.passage_count + ' passages' : 'Awaiting first official snapshot'}</span></div>
           <div><strong>Outcome</strong><span>Evaluation and lawyer handoff</span></div>
         </div>
         <p>Absence from this corpus is never treated as proof that an authority does not exist. “Likely fabricated” requires a separately recorded negative official-registry check.</p>
+      </div>
+      <div className="corpus-notice">
+        <strong>Licensed materials: future integration only.</strong> ProofMark does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
       </div>
       <div className="architecture-grid">
         <div className="panel architecture-column">
