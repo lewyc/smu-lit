@@ -1,0 +1,21 @@
+{
+  "catalogue_version": "v1",
+  "status": "awaiting_legal_review",
+  "generated_at": "2026-09-05T00:00:00+00:00",
+  "build_tool_version": "proofmark-research-catalog.1",
+  "source_datasets": [
+    {
+      "name": "SG-LegalCite COMBINED_ALL_CASES_FINAL_V2.csv",
+      "licence": "CC BY 4.0",
+      "source_url": "https://github.com/anonymousmeowmeow/SG-LegalCite",
+      "sha256": "22994a94441fe8d7ea3d3ad19a43c25d908b23127cef6c3dd2a49bd3e33aad5e"
+    }
+  ],
+  "approved_authority_count": 0,
+  "approved_authorities_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "review_status_counts": {
+    "approved": 0,
+    "deferred": 0
+  },
+  "runtime_use": "research_only_not_loaded_by_active_corpus"
+}

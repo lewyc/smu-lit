@@ -16,12 +16,14 @@ const current = [
   'Supabase Auth, RLS, and durable audit records',
   'Source-versioned cache, stale-report warning, and linked re-audit',
   'Reviewer-only treatment, supersession, and amendment register',
+  'Court level is surfaced; controlling status requires lawyer review',
 ]
 
 const future = [
   'Supabase Queues and stateless workers',
   'PGMQ-backed stateless official-judgment refresh workers',
   'Hybrid lexical and pgvector retrieval',
+  'Offline curated research catalogue and candidate-authority discovery',
   'Organisation administration and audit exports',
   'Drift monitoring and larger legal benchmark sets',
   'LicensedSourceConnector for SAL/SLR/LawNet where tenant licensing permits',
@@ -67,6 +69,9 @@ export function AssurancePage() {
       </div>
       <div className="corpus-notice">
         <strong>Licensed materials: future integration only.</strong> ProofMark does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
+      </div>
+      <div className="corpus-notice">
+        <strong>Research candidates are not verdict evidence.</strong> A future offline catalogue may use the independent CC BY 4.0 SG-LegalCite benchmark to nominate potentially relevant authorities. Its citing-judgment context and LLM-extracted principle are discovery metadata only; official paragraphs, reviewed Case Maps, and treatment review remain required before any legal support is presented.
       </div>
       <div className="panel boundary-panel">
         <p className="eyebrow">Who audits the auditor?</p>

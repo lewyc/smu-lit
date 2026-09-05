@@ -65,6 +65,31 @@ Text PDFs up to 15 MB can also create user-supplied Case Map drafts. Encrypted,
 scanned, malformed, and unnumbered PDFs are rejected. The binary is discarded
 after extraction, and a claimed official URL never upgrades its provenance.
 
+## Research catalogue boundary
+
+ProofMark can prepare a separate, offline research catalogue without changing
+its audit verdicts. The initial discovery input is
+[SG-LegalCite](https://github.com/anonymousmeowmeow/SG-LegalCite), an
+independent Singapore legal-citation benchmark released under CC BY 4.0; it is
+not an SAL product. Its nearby citation paragraph is discussion in the citing
+judgment and its principle field is LLM-extracted. Those fields can nominate a
+research lead, but they do not prove the cited authority's ratio, exact
+paragraph support, current treatment, or applicability to an AI answer.
+
+The large raw dataset stays outside this repository and is never read during a
+user audit. `api/data/research_catalog/v1/` contains only a compact,
+versioned, review-gated catalogue. It is currently empty while legal review is
+pending and is deliberately not loaded by the active audit corpus. A future
+candidate-retrieval feature may show only: **Potentially relevant authority -
+requires source and treatment review**. It cannot change a verdict, score or
+`verified` status by itself.
+
+Current lexical TF-IDF ranking is narrower: it ranks paragraphs only within an
+authority already resolved from the AI answer's citation. Gemini atomises
+claims and proposes controlled labels; it does not create a separate fact
+record or legal conclusion. Court level is displayed, but declaring an
+authority controlling requires lawyer review.
+
 ## Create the presentation snapshot
 
 Before the pitch, add GEMINI_API_KEY to api/.env and run this once while the
@@ -173,6 +198,9 @@ cd ..\dashboard
 npm run typecheck
 npm test -- --run
 npm run build
+
+cd ..\api
+uv run python -m app.research_catalog_cli validate --catalogue-dir api/data/research_catalog/v1
 ```
 
 ## Scope boundary
