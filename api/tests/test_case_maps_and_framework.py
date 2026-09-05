@@ -42,7 +42,7 @@ def _authority(document_hash: str = "a" * 64) -> Authority:
 def test_case_map_generation_is_anchored_and_approval_is_review_only(tmp_path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     corpus.activate([_authority()], persist_snapshot=False)
-    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
+    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus)
     case_map = service.generate("[2025] SGHC 1")
     assert case_map.document_hash == "a" * 64
     assert case_map.annotations[0].paragraph_labels == ["[10]"]
@@ -72,7 +72,7 @@ def test_case_map_becomes_stale_when_official_hash_changes(tmp_path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     corpus.activate([_authority()], persist_snapshot=False)
     repository = LocalCaseMapRepository()
-    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo"), corpus, repository)
+    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus, repository)
     case_map = service.generate("[2025] SGHC 1")
     corpus.activate([_authority("b" * 64)], persist_snapshot=False)
     assert service.get(case_map.public_id).status == "stale"
@@ -83,7 +83,7 @@ def test_case_map_becomes_stale_when_official_hash_changes(tmp_path) -> None:
 def test_case_map_correction_creates_a_superseding_version(tmp_path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     corpus.activate([_authority()], persist_snapshot=False)
-    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
+    service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus)
     original = service.generate("[2025] SGHC 1")
     revised = service.revise(
         original.public_id,

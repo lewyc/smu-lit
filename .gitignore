@@ -16,3 +16,9 @@ dashboard/vite.config.d.ts
 .DS_Store
 supabase/.branches/
 supabase/.temp/
+dataset/COMBINED_ALL_CASES_FINAL_V2.csv
+dataset/gitattributes
+dataset/README.md
+dataset/stage2_case_lookup.json
+dataset/stage2_direct_candidate_pools_v2.json
+dataset/stage2_single_stage_pools.json

@@ -153,5 +153,7 @@ def parse_with_mode(text: str, mode: ParserMode, settings: Settings) -> ParseRes
         claims = GeminiClaimParser(settings).parse(text)
         return ParseResult(claims, "gemini", None)
     except Exception as exc:
-        safe_reason = f"Gemini unavailable ({type(exc).__name__}); local parser used."
+        status_code = getattr(exc, "status_code", None)
+        detail = f" status {status_code}" if status_code else ""
+        safe_reason = f"Gemini unavailable ({type(exc).__name__}{detail}); local parser used."
         return ParseResult(local.parse(text), "local", safe_reason)

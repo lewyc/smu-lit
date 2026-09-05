@@ -107,7 +107,7 @@ def test_unknown_citation_is_not_called_fabricated_without_negative_check() -> N
 
 
 def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> None:
-    audit = gold_engine().audit(
+    audit = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), GoldFixtureCorpusRepository()).audit(
         AuditSubmission(
             answer="A legitimate interest is required [2007] SGCA 53.",
             parser_mode="auto",

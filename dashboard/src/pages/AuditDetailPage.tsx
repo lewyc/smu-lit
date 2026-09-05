@@ -6,6 +6,11 @@ import { ErrorPanel, LoadingPanel, PageHeader, VerdictBadge } from '../component
 import { auditRepository } from '../lib/repository'
 import type { AuditDetail } from '../types'
 
+function excerpt(value: string, maximum = 260) {
+  const compact = value.replace(/\s+/g, ' ').trim()
+  return compact.length > maximum ? compact.slice(0, maximum).trimEnd() + '…' : compact
+}
+
 export function AuditDetailPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
@@ -69,6 +74,10 @@ export function AuditDetailPage() {
   const staleMessage = corpusIsStale
     ? 'This report used ' + audit.corpus_version + '. The active snapshot is ' + (audit.active_corpus_version ?? 'newer') + ' and sources are current as of ' + sourceDate + '.'
     : 'A lawyer-approved treatment, supersession, or amendment record changed after this report was created.'
+  const submittedContext = [
+    audit.original_question ? 'Question: ' + audit.original_question : '',
+    audit.facts ? 'Facts: ' + audit.facts : '',
+  ].filter(Boolean).join(' ') || audit.input_text
 
   return (
     <section className="page">
@@ -104,6 +113,22 @@ export function AuditDetailPage() {
         </div>
       )}
       {reAuditError && <ErrorPanel message={reAuditError} />}
+      <section id="submitted-input" className="panel submitted-input-panel">
+        <div className="submitted-input-heading">
+          <div><p className="eyebrow">Original user input</p><h2>Material assessed in this audit</h2></div>
+          <span>{audit.audit_mode === 'full' ? 'Full contextual audit' : 'Citation-only audit'}</span>
+        </div>
+        <div className="submission-block">
+          <strong>AI answer submitted for evaluation</strong>
+          <pre aria-label="AI answer submitted for evaluation">{audit.input_text}</pre>
+        </div>
+        {(audit.original_question || audit.facts) && (
+          <div className="submitted-context-grid">
+            {audit.original_question && <div className="submission-block"><strong>Original legal question</strong><p>{audit.original_question}</p></div>}
+            {audit.facts && <div className="submission-block"><strong>Facts supplied for context</strong><p>{audit.facts}</p></div>}
+          </div>
+        )}
+      </section>
       <div className="detail-top-grid">
         <div className="panel metric-chart">
           <div><p className="eyebrow">Transparent metrics</p><h2>Audit posture</h2></div>
@@ -152,7 +177,35 @@ export function AuditDetailPage() {
       </section>
 
       {(audit.flags?.length ?? 0) > 0 && (
-        <section className="panel framework-flags"><p className="eyebrow">Context, omissions and balance</p><h2>Lawyer review prompts</h2>{audit.flags!.map((flag, index) => <div key={`${flag.code}-${index}`}><span className={`status-pill ${flag.severity}`}>{flag.severity}</span><p><strong>{flag.code.replaceAll('_', ' ')}</strong> · {flag.message}</p></div>)}</section>
+        <section id="review-prompts" className="panel framework-flags">
+          <p className="eyebrow">Context, omissions and balance</p>
+          <h2>Lawyer review prompts</h2>
+          <p className="prompt-intro">Each prompt links to the claim or submitted context that triggered it.</p>
+          {audit.flags!.map((flag, index) => {
+            const referencedClaim = flag.claim_order == null
+              ? undefined
+              : audit.claims.find((claim) => claim.order === flag.claim_order)
+            return (
+              <div className="framework-flag" key={flag.code + '-' + index}>
+                <span className={'status-pill ' + flag.severity}>{flag.severity}</span>
+                <div>
+                  <p><strong>{flag.code.replaceAll('_', ' ')}</strong> · {flag.message}</p>
+                  {referencedClaim ? (
+                    <a className="prompt-reference" href={'#claim-' + referencedClaim.order}>
+                      <span>Refers to claim {referencedClaim.order.toString().padStart(2, '0')}</span>
+                      <q>{excerpt(referencedClaim.text)}</q>
+                    </a>
+                  ) : (
+                    <a className="prompt-reference" href="#submitted-input">
+                      <span>Derived from the submitted question, facts, or answer</span>
+                      <q>{excerpt(submittedContext)}</q>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </section>
       )}
 
       <div className="report-grid">

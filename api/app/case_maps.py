@@ -181,6 +181,12 @@ class CaseMapService:
         if authority is None:
             raise LookupError("Authority is not present in the active immutable snapshot")
         annotations, model = self.annotator.annotate(authority, authority.passages)
+        annotations = [
+            annotation.model_copy(
+                update={"paragraph_labels": [self._canonical_label(label) for label in annotation.paragraph_labels]}
+            )
+            for annotation in annotations
+        ]
         annotations = self._deduplicate(annotations)
         validated, errors = self.validator.validate(authority, annotations)
         now = datetime.now(UTC)
@@ -222,6 +228,13 @@ class CaseMapService:
                 }
             )
         return list(merged.values())
+
+    @staticmethod
+    def _canonical_label(label: str) -> str:
+        numbers = [int(value) for value in re.findall(r"\d+", label)]
+        if len(numbers) >= 2:
+            return f"[{numbers[0]}]-[{numbers[1]}]"
+        return f"[{numbers[0]}]" if numbers else label
 
     def list(self) -> list[CaseMapDetail]:
         maps = self.repository.list()

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     gemini_model: str = Field(default="gemini-3.5-flash-lite", validation_alias="GEMINI_MODEL")
     gemini_claim_model: str = Field(default="", validation_alias="GEMINI_CLAIM_MODEL")
     gemini_casemap_model: str = Field(default="gemini-3.6-flash", validation_alias="GEMINI_CASEMAP_MODEL")
-    gemini_timeout_seconds: float = Field(default=8.0, validation_alias="GEMINI_TIMEOUT_SECONDS")
+    gemini_timeout_seconds: float = Field(default=12.0, validation_alias="GEMINI_TIMEOUT_SECONDS")
     audit_retention_days: int = Field(default=30, ge=1, le=3650, validation_alias="PROOFMARK_AUDIT_RETENTION_DAYS")
     refresh_interval_hours: int = Field(default=24, ge=0, le=720, validation_alias="PROOFMARK_REFRESH_INTERVAL_HOURS")
 

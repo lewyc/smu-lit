@@ -1,8 +1,16 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, vi } from 'vitest'
 import App from './App'
+import { DEMO_ANSWER, savedDemoResult } from './lib/demo'
 import { auditRepository } from './lib/repository'
+import { AuditDetailPage } from './pages/AuditDetailPage'
+
+vi.stubGlobal('ResizeObserver', class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+})
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -54,5 +62,43 @@ describe('ProofMark dashboard', () => {
     expect(screen.getByText(/Generate anchored draft/i)).toBeInTheDocument()
     expect(screen.getByText(/Practitioner feedback/i)).toBeInTheDocument()
     expect(await screen.findByText(/0 maps/i)).toBeInTheDocument()
+  })
+
+  it('shows the assessed input and links prompts to their claim or context source', async () => {
+    vi.spyOn(auditRepository, 'getAudit').mockResolvedValue({
+      ...savedDemoResult,
+      audit_mode: 'full',
+      original_question: 'Can the employer enforce this worldwide restraint?',
+      facts: 'The employee was a senior salesperson with customer access.',
+      flags: [
+        {
+          code: 'wrong_pinpoint',
+          module: 'citation_integrity',
+          severity: 'serious',
+          message: 'The supplied pinpoint is missing or does not support the mapped proposition.',
+          claim_order: 1,
+          lawyer_review_required: true,
+        },
+        {
+          code: 'potential_omission',
+          module: 'balance_completeness',
+          severity: 'review',
+          message: 'The issue checklist expects consideration of public interest.',
+          claim_order: null,
+          lawyer_review_required: true,
+        },
+      ],
+    })
+    render(
+      <MemoryRouter initialEntries={['/audits/fixture-audit']}>
+        <Routes>
+          <Route path="/audits/:id" element={<AuditDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText(/Material assessed in this audit/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/AI answer submitted for evaluation/i)).toHaveTextContent(DEMO_ANSWER.split('\n')[0])
+    expect(screen.getByRole('link', { name: /Refers to claim 01/i })).toHaveAttribute('href', '#claim-1')
+    expect(screen.getByRole('link', { name: /Derived from the submitted question/i })).toHaveAttribute('href', '#submitted-input')
   })
 })
