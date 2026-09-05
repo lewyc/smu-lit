@@ -43,6 +43,16 @@ from app.repositories import (
 )
 from app.scheduler import RefreshScheduler
 from app.taxonomy import PROPOSITIONS, TAXONOMY_VERSION
+from app.veritas import (
+    CONFIG_PATH,
+    CorpusIntegrityError,
+    HumanReviewDecisionSubmission,
+    HumanReviewItem,
+    HumanReviewQueue,
+    VeritasDemoRunner,
+    VeritasDemoSuite,
+    public_operating_config,
+)
 
 settings = get_settings()
 active_corpus = ActiveCorpusRepository()
@@ -78,6 +88,8 @@ case_maps = CaseMapService(settings, case_map_sources)
 feedback_repository = LocalFeedbackRepository()
 local_currency_records: list[LegalCurrencyRecord] = []
 refresh_repositories: dict[UUID, SupabaseCorpusRefreshRepository] = {}
+human_review_queue = HumanReviewQueue(CONFIG_PATH.parent / "runtime" / "human_reviews.json")
+veritas_demos = VeritasDemoRunner(human_review_queue)
 
 
 def _finish_refresh(run: RefreshRun) -> None:
@@ -493,6 +505,43 @@ def list_legal_currency_records(token: Annotated[str | None, Depends(_token)]):
 @app.get("/api/v1/hierarchies")
 def get_hierarchies():
     return hierarchies()
+
+
+@app.get("/api/v1/veritas/config")
+def get_veritas_operating_config():
+    try:
+        return public_operating_config()
+    except CorpusIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/v1/veritas/demos/run", response_model=VeritasDemoSuite)
+def run_veritas_demos() -> VeritasDemoSuite:
+    try:
+        return veritas_demos.run()
+    except CorpusIntegrityError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/veritas/reviews", response_model=list[HumanReviewItem])
+def list_veritas_reviews(token: Annotated[str | None, Depends(_token)]):
+    _member(token)
+    return human_review_queue.list()
+
+
+@app.post("/api/v1/veritas/reviews/{public_id}/decisions", response_model=HumanReviewItem)
+def decide_veritas_review(
+    public_id: UUID,
+    submission: HumanReviewDecisionSubmission,
+    token: Annotated[str | None, Depends(_token)],
+):
+    _member(token, reviewer_required=True)
+    try:
+        return human_review_queue.decide(public_id, submission)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @app.post("/api/v1/benchmarks/run", response_model=BenchmarkResult)

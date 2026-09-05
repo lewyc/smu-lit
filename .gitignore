@@ -10,6 +10,7 @@ __pycache__/
 .ruff_cache/
 *.pyc
 coverage/
+api/data/runtime/
 *.tsbuildinfo
 dashboard/vite.config.js
 dashboard/vite.config.d.ts

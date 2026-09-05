@@ -15,6 +15,7 @@ export interface Passage {
   id: string
   paragraph_label: string
   text: string
+  text_kind?: 'judgment_excerpt' | 'legal_team_summary'
   supported_propositions: string[]
   limitations: string[]
   source_provenance?: 'officially_sourced' | 'user_supplied' | 'gold_fixture' | 'rejected'
@@ -349,12 +350,120 @@ export interface BenchmarkResult {
   fabrication_precision: number
   fabrication_false_positive_count: number
   confusion_matrix: Record<string, Record<string, number>>
-  citation_identity_precision: number
-  citation_identity_recall: number
-  pinpoint_precision: number
-  pinpoint_recall: number
-  quote_accuracy: number
-  gate_confusion_matrix: Record<string, Record<string, Record<string, number>>>
+  operating_config_version: string
+  latency_target_ms: number | null
+}
+
+export interface TierExecution {
+  tier: 0 | 1 | 2 | 3
+  name: string
+  status: 'complete' | 'queued' | 'not_required' | 'blocked_missing_data'
+  checks: string[]
+  duration_ms: number | null
+  latency_target_ms: number | null
+  target_status: 'unmeasured' | 'configured_not_claimed'
+  model_inference: boolean
+  escalated: boolean
+  reason: string
+}
+
+export interface DemoEvidence {
+  citation: string
+  case_name: string
+  paragraph_label: string
+  text: string
+  official_url: string
+  source_sha256: string
+  hash_verified: boolean
+}
+
+export interface VeritasDemoResult {
+  demo_id: string
+  title: string
+  input: string
+  expected_code: string
+  detected_code: string
+  expected_verdict: string
+  verdict: string
+  passed: boolean
+  explanation: string
+  quote_status: 'exact_match' | 'not_applicable'
+  citation_gate: 'passed' | 'triggered' | 'not_assessed'
+  currency_gate: 'passed' | 'triggered' | 'not_assessed'
+  evidence: DemoEvidence[]
+  tier_trace: TierExecution[]
+  human_review_id: string | null
+}
+
+export interface VeritasDemoSuite {
+  config_version: string
+  scope: string
+  integrity_instruction: string
+  run_at: string
+  passed_count: number
+  demo_count: number
+  targets_are_measurements: false
+  tier_2_sampling_status: string
+  results: VeritasDemoResult[]
+}
+
+export interface VeritasOperatingConfig {
+  config_version: string
+  scope: string
+  measurement_policy: {
+    rule: string
+    performance_runs: number
+    latency_targets_ms: Record<'tier_0' | 'tier_1' | 'tier_2' | 'tier_3', number | null>
+    tier_2_sample_rate: number | null
+  }
+  calibration: {
+    confidence_band_boundaries: null | Record<string, number>
+    measured_accuracy_by_confidence_band: null | Record<string, number>
+    held_out_set_version: string | null
+    component_metrics: Record<string, null | Record<string, number>>
+    dashboard_figures_policy: string
+    final_submission_figures_policy: string
+  }
+  assurance_policy: {
+    policy_version: string
+    claim_graph_version: string
+    score_cap_when_gate_triggers: number
+    weights_validation_status: string
+    weights: Record<string, number>
+  }
+  integrity_policy: {
+    instruction: string
+    missing_corpus_behaviour: 'fail_loudly'
+  }
+  tiers: Array<{
+    tier: 0 | 1 | 2 | 3
+    name: string
+    coverage: string
+    execution: string
+    model_inference: boolean | string
+    checks: string[]
+  }>
+}
+
+export interface HumanReviewDecision {
+  reviewer_name: string
+  reviewer_role: 'qualified_lawyer' | 'legal_researcher'
+  decision: 'confirm' | 'reject' | 'needs_more_evidence'
+  rationale: string
+  dissent: string | null
+  decided_at: string
+}
+
+export interface HumanReviewItem {
+  public_id: string
+  demo_id: string
+  issue: string
+  status: 'queued' | 'under_review' | 'resolved' | 'blocked_missing_data'
+  created_at: string
+  decisions: HumanReviewDecision[]
+  authoritative_resolution: 'confirmed' | 'rejected' | 'unresolved'
+  gold_candidate: boolean
+  resolution_note: string
 }
 
 export interface CoverageCell {
@@ -418,4 +527,8 @@ export interface AuditRepository {
   approveCaseMap(publicId: string): Promise<CaseMapDetail>
   submitFeedback(input: FeedbackSubmission): Promise<PractitionerFeedback>
   listFeedback(): Promise<PractitionerFeedback[]>
+  getVeritasConfig(): Promise<VeritasOperatingConfig>
+  runVeritasDemos(): Promise<VeritasDemoSuite>
+  listHumanReviews(): Promise<HumanReviewItem[]>
+  submitHumanDecision(publicId: string, input: Omit<HumanReviewDecision, 'decided_at' | 'dissent'> & { dissent?: string }): Promise<HumanReviewItem>
 }

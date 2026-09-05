@@ -9,23 +9,16 @@ case-law database.
 
 ```text
 Official snapshot -> paragraph-anchored Case Map draft -> lawyer approval
-Pasted AI answer -> parsed legal claims
--> Tier 0 citation identity, pinpoint, direct-quote, source-role, modality and treatment checks
--> deterministic statuses and evidence gates -> lawyer handoff and feedback review
--> deferred VERITAS Q2-Q4 research paths remain non-gating
+Pasted AI answer + optional question/facts -> parsed legal claims
+-> citation, pinpoint, modality, context, currency and omission checks
+-> Q1 existence -> Q2 fidelity -> Q3 legal significance -> Q4 completeness
+-> gates before configurable weights -> lawyer handoff and feedback review
 -> optional Supabase persistence
 ```
 
 The dashboard runs locally. In `demo` mode it needs no account or cloud
 credentials. In `supabase` mode the browser uses Supabase Auth and the FastAPI
 service validates the signed-in user before persisting derived results.
-
-The dashboard uses same-origin `/api` requests by default. Vite proxies those
-requests to `127.0.0.1:8000` during local development, so a Cloudflare tunnel
-in front of the dashboard also reaches the API as long as FastAPI is running on
-the same host. For a separately hosted API, set `VITE_API_URL` before starting
-or building the dashboard and add the dashboard origin to
-`PROOFMARK_CORS_ORIGINS`.
 
 ## Start locally
 
@@ -50,11 +43,19 @@ npm run dev
 Open `http://localhost:5173`, choose **New audit**, load the demonstration
 answer, and run it. API documentation is at `http://127.0.0.1:8000/docs`.
 
-The current release accepts **Citation only** audits. It checks deterministic
-citation integrity only: neutral citation/case identity, numbered pinpoints,
-direct quotes, reviewer-labelled source role, approved treatment status and
-modal wording. It does not assess factual fit, ratio, legal significance,
-entailment, completeness or omitted authorities.
+For the five VERITAS credibility scenarios, open **Demos 1–5** and select
+**Run demos 1–5**. The page executes source-hash validation, case identity,
+quote/proposition, judicial-role, and reviewed currency checks, then shows the
+one-direction Tier 0–3 trace. Critical and currency-sensitive results enter a
+durable local Tier 3 queue. Two different qualified-lawyer decisions are
+required before an item can become a gold candidate; the application never
+generates a human decision.
+
+Use **Citation only** for the original answer-only flow. Use **Full** to add the
+original question and facts; this enables contextual distinctions, issue
+omissions, balance prompts, and the weighted four-module score. A total is
+withheld whenever a required module (for example reviewed currency data) is
+unavailable rather than renormalising incomplete evidence.
 
 The **Case Maps** workbench can generate a draft from any authority in the
 active immutable snapshot. Gemini is optional: without a key, the local
@@ -71,18 +72,33 @@ review prompt but cannot trigger a hard score gate. The Supabase schema also
 contains a reverse dependency index so a future recomputation worker can find
 audits that consumed a corrected Case Map field.
 
-Historical full-mode records remain readable and retain the VERITAS five-level
-failure taxonomy, Claim Graph, and bounded landmark comparison for research
-traceability. New submissions do not run that contextual mode in Tier 0: they
-are citation-only, and contextual completeness, omitted-authority analysis,
-and independent counter-authority retrieval remain deferred. Any historical
-full-mode output is a review prompt, not proof that an answer is complete.
+Audit reports use the VERITAS five-level failure taxonomy: non-existent
+authority, citation substitution, citation fidelity, contextual
+mischaracterisation, and synthesis/coverage. The Claim Graph is returned as a
+small JSON bipartite graph rather than adding a graph database. Full mode runs
+one bounded landmark-candidate comparison and records the corpus, set version,
+configuration, independence limitation, and searched-but-not-found list.
+This is not independent counter-authority retrieval and does not prove an
+answer complete.
 
-Scoring policy lives in api/data/assurance_policy.json; changing its version
-invalidates the exact-result cache. Citation, unsupported-assertion, and
+All proposed operating figures live in
+`api/data/veritas_operating_config.json`. This includes indicative scoring
+weights, gate caps, latency targets, Tier 2 sample rate, confidence-band
+boundaries, per-band accuracy, and component measurements. A null value means
+unmeasured and must render as unmeasured; configured values are not presented
+as achieved results. Changing the assurance policy version invalidates the
+exact-result cache. Citation, unsupported-assertion, and
 approved-currency gates run before weights. Direct contradiction remains
 explicitly unassessed because lexical similarity is not Legal NLI. Exact and
 whitespace-normalised quotation checks run against stored judgment text only.
+
+The five demo excerpts are short official eLitigation passages with checked
+citations, paragraph labels, source URLs, and SHA-256 hashes. Configuration
+loading fails loudly if an excerpt, hash, anchor, source host, or referenced
+source is missing or changed. Never add a synthetic case name, citation, court
+record, treatment, or judgment passage to make a test pass. The fabricated-case
+demo uses the Singapore High Court's own redacted labels “Case A” and “Case B”;
+ProofMark deliberately does not reproduce the false citations.
 
 Before the first official refresh, the Case Map workbench alone exposes the six
 isolated gold judgments as a clearly labelled preprocessing demo source. This
@@ -113,14 +129,6 @@ candidate-retrieval feature may show only: **Potentially relevant authority -
 requires source and treatment review**. It cannot change a verdict, score or
 `verified` status by itself.
 
-The manual Chrome intake is recorded separately in
-`api/data/research_catalog/v1/manual_retrieval_batch_01.json` and
-`manual_retrieval_batch_02.json`. Together they contain 25 official eLitigation
-judgment locators (549 matching SG-LegalCite citation rows) covering
-restraint-of-trade, confidentiality, scope, duration, severance and injunction
-issues. They store provenance and paragraph targets only; raw judgment text,
-hashes and approved Case Maps remain pending legal review.
-
 Current lexical TF-IDF ranking is narrower: it ranks paragraphs only within an
 authority already resolved from the AI answer's citation. Gemini atomises
 claims and proposes controlled labels; it does not create a separate fact
@@ -134,11 +142,10 @@ official SG Courts/eLitigation site is available:
 
 ~~~powershell
 cd api
-uv run python -m app.refresh_cli --tier0-target-pack
+uv run python -m app.refresh_cli
 ~~~
 
-The Tier 0 release flag fetches exactly the six GoldFixture identities through
-their official URLs. It uses a strict SG Courts allowlist,
+It uses five taxonomy-derived search queries, a strict SG Courts allowlist,
 robots guidance, 1 request/second throttling, bounded retries, and a
 25-judgment ceiling. Each accepted source must have a matching neutral citation
 in its heading and numbered paragraphs. Gemini may select only extracted
@@ -152,70 +159,6 @@ during an audit. If network access, source terms, robots guidance, parsing, or
 Gemini annotation fails, ProofMark keeps the last successful snapshot and says
 that it is cached. Do not claim a live refresh succeeded when the page shows
 the fallback banner.
-
-## Certify and archive a Tier 0 snapshot
-
-The refresh command does not certify legal review. Before using a snapshot in a
-Tier 0 release, legal review must approve each authority's official URL,
-neutral citation, document hash, numbered passages and source-role metadata.
-After that review, validate and archive the exact bytes:
-
-~~~powershell
-cd api
-uv run python -m app.snapshot_cli validate --snapshot data/frozen_snapshot.json --require-certified
-uv run python -m app.snapshot_cli archive --snapshot data/frozen_snapshot.json --require-certified
-~~~
-
-The validator rejects missing hashes, non-eLitigation URLs, missing numbered
-paragraphs, unreviewed evidence, or unreviewed source roles. The archive stores
-the snapshot plus a content-hash manifest. It does not create approvals or
-replace legal review.
-
-Record the human legal decision separately at
-`data/release_evidence/tier0_v1/legal_review.json`. It must identify the
-reviewer, cover exactly six authorities, confirm URL/citation/hash/paragraph
-and source-role approval, and state that the approved treatment/currency
-registry was checked. The release checker does not infer this file from a
-successful refresh or from benchmark fixtures.
-
-## Tier 0 release evidence
-
-Run the deterministic release benchmark from the six-case gold fixture pack:
-
-~~~powershell
-cd api
-.venv\Scripts\python.exe -m app.benchmark_cli --runs 250
-~~~
-
-The command fails unless the fixture pack is exact, has zero benchmark errors,
-and stays below the 1,500 ms P95 target. It writes
-`api/data/release_evidence/tier0_v1/benchmark.json`; the adjacent
-`release_status.json` records external blockers such as legal review and the
-connected-user rehearsal. Gold fixtures are benchmark evidence only and do not
-make an ordinary runtime snapshot `verified`.
-
-The final release checker is fail-closed. Run it from `api` after each evidence
-step:
-
-~~~powershell
-.venv\Scripts\python.exe -m app.release_cli check
-~~~
-
-It requires the certified six-authority snapshot/archive, a legal review
-record, a saved local RLS result, a connected-user verification record,
-and an offline rehearsal record.
-It exits non-zero while any one of those gates is missing; benchmark fixtures
-cannot satisfy an external gate.
-
-After the certified archive exists, the offline rehearsal can be recorded with:
-
-~~~powershell
-.venv\Scripts\python.exe -m app.offline_rehearsal_cli
-~~~
-
-The rehearsal refuses to use the gold fixture corpus, Gemini, refresh, or
-network. It loads only the certified snapshot and writes
-`data/release_evidence/tier0_v1/offline_rehearsal/rehearsal.json`.
 
 ## Freshness, re-audit, and retention
 
@@ -267,26 +210,20 @@ currency has not been reviewed.
   labelled **Saved demonstration result**. It never presents that result as a
   newly executed audit.
 
-The Supabase schema, seed corpus, and pgTAP RLS tests live in `supabase/`.
-Project `zxjaccusnmunjgktzkme` has been reconciled with the repository
-migrations without resetting its existing demo data. The hosted migration
-history currently includes the initial schema, refresh/currency/Case Map
-migrations, and the Tier 0 integrity-provenance migration. Review the seed
-passages with the legal-research team before activating any new corpus.
+The Supabase schema, metadata-only seed, and pgTAP RLS tests live in
+`supabase/`. The seed deliberately contains no judgment passages and no
+synthetic negative-registry record. Exact source text must enter through the
+hashed official refresh pipeline.
 
 ## Connected Supabase setup
 
-For a fresh or otherwise approved environment, review and apply migration files
-in order to project `zxjaccusnmunjgktzkme`:
+For the connected mode, review and apply all migration files in order to
+project zxjaccusnmunjgktzkme:
 
 ~~~powershell
 npx supabase@latest link --project-ref zxjaccusnmunjgktzkme
 npx supabase@latest db push
 ~~~
-
-Do not run `migration repair` unless a schema-only remote dump proves that a
-specific migration is already present. Do not run `db reset` against the shared
-project.
 
 This requires the project database password and does not require Docker.
 Alternatively, run every SQL file in supabase/migrations/ in timestamp order
@@ -296,34 +233,6 @@ and retention fields, reviewer-only legal-currency records, explicit Data API
 grants, RLS, and a service-role-only transactional snapshot activator.
 Browser clients can read allowed metadata but cannot write refreshes, corpus
 content, derived evidence, or verdicts.
-
-### Connected audit release evidence
-
-The connected gate is a user-journey check, not a service-key database insert.
-With the API in `supabase` mode and the dashboard signed in as the confirmed
-demo member, submit one citation-only audit, reload its detail page, and verify
-that the report, claims, evidence, tenant scope, snapshot version and retention
-metadata remain visible. Record the result locally as
-`api/data/release_evidence/tier0_v1/connected_supabase.json` with this minimum
-shape (do not include a password, secret key or bearer token):
-
-~~~json
-{
-  "release": "tier0-v1-citation-integrity",
-  "status": "passed",
-  "audit_public_id": "<saved audit id>",
-  "persisted_after_reload": true,
-  "tenant_scoped": true,
-  "claims_and_evidence_reload": true,
-  "reviewer_controls_checked": true,
-  "snapshot_version_rendered": "<version>",
-  "retention_metadata_rendered": true
-}
-~~~
-
-The release checker accepts this file only when the required fields are true.
-Do not mark it passed from a service-role query; that would bypass the RLS and
-browser-auth boundary the gate is intended to verify.
 
 ## Verification
 
@@ -349,11 +258,12 @@ isolated as **benchmark gold fixtures only**. They are the sole pathway
 to the verified fixture label; an official, AI-supported runtime paragraph can
 produce only context_review.
 
-The two newly added Smile Inc and MoneySmart fixture extracts are explicitly
-marked for legal-team verification in their passage limitations. Do not quote
-their paraphrases or present their expected labels until counsel has checked
-the linked official judgments. Secondary journals and articles are metadata
-only; ProofMark does not ship or reproduce their text.
+Legacy benchmark proposition text is explicitly typed
+`legal_team_summary`, not `judgment_excerpt`, and the dashboard warns that it
+is not judgment text. Do not quote those summaries or present their expected
+labels as legal conclusions until counsel has checked the linked official
+judgments. Secondary journals and articles are metadata only; ProofMark does
+not ship or reproduce their text.
 
 SAL, SLR, and LawNet are deliberately excluded from this MVP. A future
 LicensedSourceConnector may ingest private tenant material only when the

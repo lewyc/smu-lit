@@ -37,8 +37,8 @@ insert into public.source_imports (
   organisation_id, imported_by, filename, expected_citation,
   normalised_citation_key, document_hash
 ) values
-  ((select id from public.organisations where slug = 'rls-a'), '11111111-1111-1111-1111-111111111111', 'a.pdf', '[2025] SGHC 1', '2025SGHC1', repeat('a', 64)),
-  ((select id from public.organisations where slug = 'rls-b'), '22222222-2222-2222-2222-222222222222', 'b.pdf', '[2025] SGHC 2', '2025SGHC2', repeat('b', 64));
+  ((select id from public.organisations where slug = 'rls-a'), '11111111-1111-1111-1111-111111111111', 'a.pdf', '[2024] SGHC 29', '2024SGHC29', repeat('a', 64)),
+  ((select id from public.organisations where slug = 'rls-b'), '22222222-2222-2222-2222-222222222222', 'b.pdf', '[2007] SGCA 53', '2007SGCA53', repeat('b', 64));
 
 insert into public.case_map_runs (
   organisation_id, source_import_id, created_by, normalised_citation_key,

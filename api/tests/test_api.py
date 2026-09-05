@@ -32,7 +32,7 @@ def test_audit_can_be_retrieved_in_demo_mode() -> None:
 
 def test_demo_cache_creates_a_new_traceable_audit_and_reaudit_bypasses_it() -> None:
     payload = {
-        "answer": "A fresh cache fixture says a restraint is invalid [2026] SGHC 123.",
+        "answer": "A fresh cache fixture says a restraint is invalid [2026] SGHC 49.",
         "parser_mode": "local",
         "reuse_cache": True,
     }

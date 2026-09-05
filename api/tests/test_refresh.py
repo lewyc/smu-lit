@@ -16,10 +16,10 @@ from app.refresh import (
 
 HTML = """
 <html><body>
-  <h1>Example Employer Pte Ltd v Example Employee</h1>
-  <p>[2025] SGHC 101</p>
-  <p>[1] A restraint must protect a legitimate proprietary interest.</p>
-  <p>[2] The inquiry remains fact-sensitive.</p>
+  <h1>Shopee Singapore Pte Ltd v Lim Teck Yong</h1>
+  <p>[2024] SGHC 29</p>
+  <p>[59] must always – and this is a fundamental legal proposition
+  in this particular area of the law – be a legitimate proprietary interest</p>
 </body></html>
 """
 
@@ -28,9 +28,9 @@ class FixtureConnector:
     def __init__(self, candidates: list[SourceCandidate] | None = None) -> None:
         self.candidates = candidates or [
             SourceCandidate(
-                citation="[2025] SGHC 101",
-                citation_key="2025SGHC101",
-                url="https://www.elitigation.sg/gd/s/2025_SGHC_101",
+                citation="[2024] SGHC 29",
+                citation_key="2024SGHC29",
+                url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
                 discovery_query="employment restraint",
             )
         ]
@@ -46,7 +46,7 @@ class FixtureAnnotator:
     def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
         return [
             EvidenceAnnotation(
-                paragraph_label="[1]",
+                paragraph_label="[59]",
                 proposition="legitimate_proprietary_interest",
                 limitations=["Fact-sensitive."],
                 outcome_direction="mixed",
@@ -55,7 +55,7 @@ class FixtureAnnotator:
         ]
 
 
-class InventedLabelAnnotator:
+class MissingAnchorAnnotator:
     def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
         return [
             EvidenceAnnotation(
@@ -78,9 +78,9 @@ class DiscoveryHttpClient:
         return httpx.Response(
             200,
             text=(
-                '<a href="/gdviewer/s/2025_SGHC_101">Example [2025] SGHC 101</a>'
-                '<a href="/gdviewer/s/2025_SGHC_101">Duplicate [2025] SGHC 101</a>'
-                '<a href="https://example.com/gdviewer/s/2025_SGHC_999">Reject</a>'
+                '<a href="/gdviewer/s/2024_SGHC_29">Shopee [2024] SGHC 29</a>'
+                '<a href="/gdviewer/s/2024_SGHC_29">Duplicate [2024] SGHC 29</a>'
+                '<a href="https://example.com/gdviewer/s/2024_SGHC_29">Reject</a>'
             ),
             request=httpx.Request("GET", url),
         )
@@ -96,10 +96,10 @@ def test_refresh_extracts_validated_heading_paragraphs_and_hashes(tmp_path: Path
     ).refresh(new_refresh_run(limit=25))
     assert result.status == "complete"
     assert result.accepted_documents == 1
-    authority = corpus.resolve("2025SGHC101")
+    authority = corpus.resolve("2024SGHC29")
     assert authority is not None
     assert authority.document_hash
-    assert authority.passages[0].text.startswith("A restraint")
+    assert authority.passages[0].text.startswith("must always")
     assert authority.passages[0].assessment_status == "ai_supported"
 
 
@@ -108,7 +108,7 @@ def test_official_discovery_parses_html_deduplicates_and_keeps_allowlist() -> No
     profile = TopicProfile(version="test", queries=["employment restraint"])
     candidates = connector.discover(profile, limit=25)
     assert [(candidate.citation_key, candidate.url) for candidate in candidates] == [
-        ("2025SGHC101", "https://www.elitigation.sg/gdviewer/s/2025_SGHC_101")
+        ("2024SGHC29", "https://www.elitigation.sg/gdviewer/s/2024_SGHC_29")
     ]
 
 
@@ -116,20 +116,20 @@ def test_invalid_annotation_retains_last_successful_snapshot(tmp_path: Path) -> 
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     good = CorpusRefreshService(corpus, Settings(), connector=FixtureConnector(), annotator=FixtureAnnotator()).refresh(new_refresh_run())
     previous_version = good.active_corpus_version
-    failed = CorpusRefreshService(corpus, Settings(), connector=FixtureConnector(), annotator=InventedLabelAnnotator()).refresh(
+    failed = CorpusRefreshService(corpus, Settings(), connector=FixtureConnector(), annotator=MissingAnchorAnnotator()).refresh(
         new_refresh_run()
     )
     assert failed.status == "fallback"
     assert failed.active_corpus_version == previous_version
-    assert corpus.resolve("2025SGHC101") is not None
+    assert corpus.resolve("2024SGHC29") is not None
 
 
 def test_rejects_heading_mismatch_and_non_allowlisted_urls(tmp_path: Path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     mismatch = SourceCandidate(
-        citation="[2025] SGHC 999",
-        citation_key="2025SGHC999",
-        url="https://www.elitigation.sg/gd/s/2025_SGHC_999",
+        citation="[2007] SGCA 53",
+        citation_key="2007SGCA53",
+        url="https://www.elitigation.sg/gd/s/2007_SGCA_53",
         discovery_query="x",
     )
     result = CorpusRefreshService(
@@ -141,8 +141,8 @@ def test_rejects_heading_mismatch_and_non_allowlisted_urls(tmp_path: Path) -> No
     assert result.status == "fallback"
 
     untrusted = SourceCandidate(
-        citation="[2025] SGHC 101",
-        citation_key="2025SGHC101",
+        citation="[2024] SGHC 29",
+        citation_key="2024SGHC29",
         url="https://example.com/not-a-judgment",
         discovery_query="x",
     )
@@ -158,12 +158,12 @@ def test_rejects_heading_mismatch_and_non_allowlisted_urls(tmp_path: Path) -> No
 def test_connector_refresh_caps_documents_at_twenty_five(tmp_path: Path) -> None:
     candidates = [
         SourceCandidate(
-            citation=f"[2025] SGHC {number}",
-            citation_key=f"2025SGHC{number}",
-            url=f"https://www.elitigation.sg/gd/s/2025_SGHC_{number}",
+            citation="[2024] SGHC 29",
+            citation_key="2024SGHC29",
+            url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
             discovery_query="x",
         )
-        for number in range(1, 31)
+        for _ in range(30)
     ]
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     result = CorpusRefreshService(

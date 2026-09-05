@@ -60,6 +60,7 @@ class Passage(BaseModel):
     id: str
     paragraph_label: str
     text: str
+    text_kind: Literal["judgment_excerpt", "legal_team_summary"] = "judgment_excerpt"
     supported_propositions: list[str]
     limitations: list[str] = Field(default_factory=list)
     source_provenance: SourceProvenance = "gold_fixture"
@@ -375,8 +376,8 @@ class AuditSubmission(BaseModel):
 
     @model_validator(mode="after")
     def require_question_for_full_mode(self) -> AuditSubmission:
-        if self.audit_mode == "full":
-            raise ValueError("Full contextual audits are deferred beyond the Tier 0 release; submit a citation-only audit.")
+        if self.audit_mode == "full" and not (self.original_question or "").strip():
+            raise ValueError("Full audit mode requires the original legal question")
         return self
 
 
@@ -593,6 +594,8 @@ class BenchmarkResult(BaseModel):
     pinpoint_recall: float = 0
     quote_accuracy: float = 0
     gate_confusion_matrix: dict[str, dict[str, dict[str, int]]] = Field(default_factory=dict)
+    operating_config_version: str = "unconfigured"
+    latency_target_ms: float | None = None
 
 
 class HealthResponse(BaseModel):

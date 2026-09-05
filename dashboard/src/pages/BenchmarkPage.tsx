@@ -25,13 +25,13 @@ export function BenchmarkPage() {
     <section className="page">
       <PageHeader
         eyebrow="Quality evidence"
-        title="Tier 0 fixed benchmark pack"
-        description="Measure deterministic citation-gate correctness separately from legal correctness."
-        action={<button className="button primary" onClick={run} disabled={running}>{running ? <span className="spinner small" /> : <Play size={16} />}{running ? 'Running 250 trials…' : 'Run benchmark'}</button>}
+        title="Fixed benchmark pack"
+        description="Measure deterministic fixture correctness separately from runtime performance."
+        action={<button className="button primary" onClick={run} disabled={running}>{running ? <span className="spinner small" /> : <Play size={16} />}{running ? 'Running configured trials…' : 'Run benchmark'}</button>}
       />
       <div className="benchmark-explainer panel">
         <CheckCircle2 size={21} />
-        <div><strong>Fixture correctness is not general legal accuracy.</strong><p>The adversarial pack tests explicit Tier 0 gates: citation identity, pinpoint, direct quote, reviewed source role, approved treatment, uncited assertions and scope.</p></div>
+        <div><strong>Fixture correctness is not general legal accuracy.</strong><p>The adversarial fixture pack spans six isolated Singapore judgments and tests only rules the team can explain: supported, overgeneralised, mismatched, uncited, negative-registry, and out-of-scope claims.</p></div>
       </div>
       {error && <ErrorPanel message={error} />}
       {result ? (
@@ -39,26 +39,22 @@ export function BenchmarkPage() {
           <div className="metric-grid benchmark-metrics">
             <div className="metric-card"><span>Fixture correctness</span><strong>{result.fixture_accuracy}%</strong><small>{result.correct_count} / {result.fixture_count} expected labels</small></div>
             <div className="metric-card"><span>P50 latency</span><strong>{result.p50_latency_ms} ms</strong><small>Median after corpus warm-up</small></div>
-            <div className="metric-card"><span>P95 latency</span><strong>{result.p95_latency_ms} ms</strong><small>Target &lt; 1,500 ms</small></div>
+            <div className="metric-card"><span>P95 latency</span><strong>{result.p95_latency_ms} ms</strong><small>{result.latency_target_ms == null ? 'Observed only · no target configured' : 'Configured target ' + result.latency_target_ms + ' ms · not claimed as achieved'}</small></div>
             <div className="metric-card"><span>Performance runs</span><strong>{result.performance_runs}</strong><small>{result.error_count} errors</small></div>
             <div className="metric-card"><span>Official-source rate</span><strong>{result.source_provenance_rate}%</strong><small>Active snapshot authorities</small></div>
             <div className="metric-card"><span>Heading-match rate</span><strong>{result.citation_heading_match_rate}%</strong><small>Validated source headings</small></div>
             <div className="metric-card"><span>Annotation disagreement</span><strong>{result.annotation_disagreement_rate}%</strong><small>Forced to context review</small></div>
             <div className="metric-card"><span>Fabrication precision</span><strong>{result.fabrication_precision}%</strong><small>{result.fabrication_false_positive_count} false positives</small></div>
-            <div className="metric-card"><span>Identity precision / recall</span><strong>{result.citation_identity_precision}% / {result.citation_identity_recall}%</strong><small>Exact citation-identity gate</small></div>
-            <div className="metric-card"><span>Pinpoint precision / recall</span><strong>{result.pinpoint_precision}% / {result.pinpoint_recall}%</strong><small>Exact numbered-paragraph gate</small></div>
-            <div className="metric-card"><span>Quote-check accuracy</span><strong>{result.quote_accuracy}%</strong><small>Direct quotes only; no semantic matching</small></div>
             <div className="metric-card"><span>Gold authority coverage</span><strong>{result.gold_authority_count}</strong><small>Isolated Singapore judgments</small></div>
           </div>
           <div className="panel coverage-panel">
-            <p className="eyebrow">Tier 0 gate calibration</p><h2>Fixture accuracy by deterministic gate</h2>
+            <p className="eyebrow">Module calibration</p><h2>Fixture accuracy by evaluated dimension</h2>
             <div className="coverage-table">{Object.entries(result.module_accuracy).map(([module, accuracy]) => <div key={module}><span>{module.replaceAll('_', ' ')}</span><strong>{accuracy == null ? 'Not yet gold-labelled' : `${accuracy}%`}</strong><small>Separate from general legal accuracy</small></div>)}</div>
           </div>
           <details className="panel source-paragraphs"><summary>View verdict confusion matrix</summary><pre>{JSON.stringify(result.confusion_matrix, null, 2)}</pre></details>
-          <details className="panel source-paragraphs"><summary>View gate confusion matrices</summary><pre>{JSON.stringify(result.gate_confusion_matrix, null, 2)}</pre></details>
           <div className="panel benchmark-proof">
             <Gauge size={22} />
-            <div><p className="eyebrow">Measured, not claimed</p><h2>Version-pinned evidence</h2><p>Engine {result.engine_version} · corpus {result.corpus_version}</p></div>
+            <div><p className="eyebrow">Measured, not claimed</p><h2>Version-pinned evidence</h2><p>Engine {result.engine_version} · corpus {result.corpus_version} · operating config {result.operating_config_version}</p></div>
           </div>
           <div className="panel coverage-panel">
             <p className="eyebrow">Snapshot coverage</p><h2>Source coverage matrix</h2>

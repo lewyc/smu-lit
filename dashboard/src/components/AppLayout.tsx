@@ -4,6 +4,7 @@ import {
   FileCheck2,
   Menu,
   Network,
+  Presentation,
   Plus,
   Scale,
   ShieldCheck,
@@ -18,6 +19,7 @@ const navigation = [
   { to: '/audits/new', label: 'New audit', icon: Plus },
   { to: '/authorities', label: 'Authorities', icon: BookOpenText },
   { to: '/case-maps', label: 'Case Maps', icon: Network },
+  { to: '/demos', label: 'Demos 1–5', icon: Presentation },
   { to: '/benchmark', label: 'Benchmark', icon: BarChart3 },
   { to: '/assurance', label: 'Assurance', icon: ShieldCheck },
 ]

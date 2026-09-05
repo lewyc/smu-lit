@@ -41,7 +41,9 @@ The largest gaps between the proposal and the current implementation are:
 - approved Case Maps are not yet the primary runtime evidence source for normal audits;
 - no statistical confidence calibration, reliability diagrams, or error-bound claims;
 - no production-derived benchmark partition or automated benchmark lifecycle;
-- no reviewer reputation, double-review, or formal dissent mechanism;
+- no reviewer reputation or production adjudication service; the bounded Tier 3
+  demo queue now enforces two independent qualified-lawyer decisions and
+  records optional dissent;
 - no populated reverse-dependency recomputation service;
 - no true asynchronous tiered evaluation architecture for thousands of daily queries;
 - no production deployment gate enforcing legal, security, performance, and calibration thresholds.
@@ -61,7 +63,8 @@ This report distinguishes proposal language from actual executable behaviour by 
 - Request, response, Case Map, feedback, and provenance models: api/app/models.py
 - Case Map generation, validation, revision, approval, and PDF intake: api/app/case_maps.py
 - Local and Supabase repositories: api/app/repositories.py
-- Versioned weights, gates, issue checklist, and landmark candidates: api/data/assurance_policy.json
+- Versioned targets, calibration placeholders, weights, gates, issue checklist,
+  and landmark candidates: api/data/veritas_operating_config.json
 - Audit explanation UI: dashboard/src/pages/AuditDetailPage.tsx
 - Case Map review UI: dashboard/src/pages/CaseMapsPage.tsx
 - Assurance disclosure UI: dashboard/src/pages/AssurancePage.tsx
@@ -699,9 +702,60 @@ This must be described as a scalability and governance foundation, not a working
 
 The proposal's lifecycle of proposed, under double review, approved, active, retired, or superseded is not implemented as a complete benchmark-governance workflow. Fixtures are version-controlled in the repository and separated from runtime data, but there is no database-backed approval lifecycle or automatic retirement process.
 
+## 7A. Implementation update: demonstrations and tier runner
+
+**Status: Fully implemented for the bounded local demonstration path**
+
+The following proposal demonstrations now run from the **Demos 1–5** dashboard
+route and the VERITAS API:
+
+| Demo | Implemented detection | Authoritative basis |
+|---|---|---|
+| 1. Fictitious authority | Court-confirmed non-existence plus citation gate; false citation remains redacted | [2026] SGHC 49 at [10] and [24] |
+| 2. Real citation, wrong case name | Canonical case-name/citation identity mismatch | Shopee [2024] SGHC 29 |
+| 3. Accurate words, wrong proposition | Exact quote passes while proposition support fails | Shopee [2024] SGHC 29 at [59] |
+| 4. Non-majority reasoning as holding | Source-role mismatch identifies a quoted foreign dissent | Man Financial [2007] SGCA 53 at [130] |
+| 5. Later rejection of relied-on approach | Reviewed, issue-specific negative-treatment gate | Smile Inc [2012] SGCA 39 at [33] |
+
+Demo 4 is not described as a Singapore dissent because no legally defensible
+in-domain Singapore dissent was available. Demo 5 is not labelled formal
+overruling: it demonstrates issue-specific later rejection and raises a
+currency-review flag.
+
+All four scalability tiers are executable in this bounded path:
+
+- Tier 0 runs deterministic source, citation, identity, pinpoint, quotation,
+  modality, court and jurisdiction checks on every demo.
+- Tier 1 executes claim/evidence, proposition, role and modality checks in
+  parallel across the five demonstrations. It does not require model inference.
+- Tier 2 runs on every escalated item and performs an independent locked-source
+  role or reviewed-treatment check. Random sampling remains disabled until a
+  measured sample rate is configured.
+- Tier 3 persists critical and currency-sensitive items to a local review
+  queue. Two different qualified lawyers must confirm an item before it becomes
+  a gold candidate. No human decision is synthesized.
+
+The tier runner is a hackathon-scale implementation, not a claim of distributed
+production capacity. Queue-backed worker fleets, cross-provider NLI ensembles,
+hosted load tests and organisation-wide review operations remain future work.
+
+Every proposal marker labelled TARGET or TO BE MEASURED is represented in
+`api/data/veritas_operating_config.json`: latency targets, Tier 2 sampling,
+confidence thresholds, per-band accuracy, component metrics, dashboard figure
+policy, and indicative scoring weights. Null renders as unmeasured. Observed
+run time is never compared with an invented target.
+
+The source ledger refuses to load if a source hash, paragraph anchor, allowed
+official host or referenced fixture is missing or changed. The old synthetic
+future-dated fixture and Supabase negative-registry seed were removed.
+Supabase now seeds authority metadata only; exact passage text must enter
+through the official source-hashed refresh pipeline. Legacy gold proposition
+paraphrases are explicitly typed as legal-team summaries and are not labelled
+judgment text.
+
 ## 8. Scalability architecture
 
-**Status: Partially implemented**
+**Status: Fully implemented for demos; partially implemented for production**
 
 ### Implemented foundations
 
@@ -715,11 +769,14 @@ The proposal's lifecycle of proposed, under double review, approved, active, ret
 - versioned preprocessing artefacts reusable while source hashes remain unchanged;
 - a local 250-run deterministic performance measurement;
 - Supabase schema designed for indexed, organisation-scoped persistence.
+- deterministic Tier 0 execution for every demonstration;
+- parallel Tier 1 claim/evidence execution;
+- escalation-only Tier 2 source-role and reviewed-treatment checks;
+- durable local Tier 3 queue with double qualified-lawyer review and dissent
+  capture.
 
 ### Not implemented
 
-- real-time Tier 0 versus Tier 1 versus Tier 2 routing;
-- asynchronous claim-level fan-out;
 - queue-backed worker fleet;
 - incremental NLI scoring;
 - background completeness retrieval;
@@ -746,7 +803,7 @@ The proposal gives five answers. Current coverage is:
 | Deterministic checks | **Partial** | Citation, source, pinpoint, quote, hashing, and provenance checks work. Statute currentness and a full citator do not. |
 | Evaluator independence | **Partial** | The evaluator is separate from the submitted output and Gemini cannot decide verdicts. Independent retrieval and provider diversity are absent. |
 | Calibration | **Not implemented** | Confidence values are uncalibrated metadata, not probabilities. |
-| Structured human feedback | **Partial** | Controlled flag, review, resolution, and revision exist. Reputation, double review, dissent, and recalibration do not. |
+| Structured human feedback | **Partial to strong** | Controlled flag, review, resolution, Case Map revision, two-lawyer Tier 3 confirmation and dissent capture exist. Reputation and automatic recalibration do not. |
 | Provenance-aware confidence | **Partial to strong** | Model, prompt, source, corpus, taxonomy, policy, reviewer, and status metadata are exposed, but runtime Case Map consumption and conditional reliability are incomplete. |
 
 The practical answer demonstrated by the MVP is narrower:
@@ -801,43 +858,26 @@ The dashboard is therefore strong as an evidence-linked review interface, but it
 | 7. Add abstention and hard gates | **Partially to fully implemented** | Unknown sources stay unverified, non-verified claims escalate, overall scoring is gated, and citation-only mode avoids a false total. | No calibrated abstention threshold or NLI contradiction gate. |
 | 8. Build a fixed benchmark with adversarial cases | **Partially implemented** | Fixed adversarial fixtures and six gold authorities run deterministically with a performance batch. | The benchmark is small, not production-derived, and lacks automated mutation and lifecycle governance. |
 | 9. Expose provenance and conditional reliability | **Partially implemented** | Rich engine, source, model, prompt, reviewer, corpus, policy, taxonomy, and fallback provenance is shown. | Conditional reliability is not statistically calibrated. |
-| 10. Add structured practitioner feedback and recalibration | **Partially implemented** | Controlled feedback, under-review state, role-based resolution, and Case Map revision exist. | No automated recalibration, reviewer reputation, double review, or dissent. |
+| 10. Add structured practitioner feedback and recalibration | **Partially implemented** | Controlled feedback, under-review state, role-based resolution, Case Map revision, and a separate two-lawyer Tier 3 queue with dissent capture exist. | No automated recalibration or reviewer reputation. |
 
 ## 12. Demonstration scenarios
 
-### Demo 1: Fabricated authority
+**Status: Fully implemented for the bounded, source-locked demo suite**
 
-**Status: Fully implemented for a pre-checked fixture**
+The current five scenarios and their exact source anchors are documented in
+section 7A. Each run returns its expected and actual detection code, verdict,
+gate state, official evidence, checked hash, and a four-tier trace.
 
-The seeded benchmark includes an unknown citation backed by a recorded negative registry check. The system can label it likely fabricated and show the provenance of the official non-existence check.
+The suite deliberately preserves three boundaries:
 
-Boundary:
+- an arbitrary unknown citation remains unverified unless an approved official
+  non-existence record exists;
+- an exact quotation is not treated as support for a different proposition;
+- issue-specific negative treatment is not relabelled as formal overruling.
 
-An arbitrary unknown citation is not automatically declared fabricated. It remains unverified until an official negative check is recorded. This conservative distinction is a strength, not a missing feature.
-
-### Demo 2: Correct case, wrong pinpoint
-
-**Status: Fully implemented**
-
-The engine checks whether the cited paragraph exists and assesses the supplied pinpoint before considering other passages. It can flag an existing paragraph that does not support the mapped proposition.
-
-### Demo 3: Correct words, wrong legal force
-
-**Status: Partially implemented**
-
-The system can demonstrate exact quotation verification, proposition mismatch, modality overstatement, and preprocessed role labels. It cannot yet complete the proposal's full end-to-end scenario in which an approved Case Map role, treatment record, and Legal NLI result jointly control the live verdict.
-
-### Demo 4: One-sided analysis
-
-**Status: Partially implemented, not independently verified**
-
-Full mode can flag potentially one-sided analysis and missing limiting authority from a bounded policy checklist. It cannot independently retrieve the omitted authority. The presentation should call this an omission prompt, not proof that the answer is one-sided.
-
-### Demo 5: Outdated law
-
-**Status: Partially implemented**
-
-Reviewed currency and treatment overlays can produce a review warning. There is no comprehensive, automated forward citation graph, so the system cannot promise that every later limiting or overruling authority has been discovered.
+The ordinary full-audit path retains additional omission and one-sidedness
+prompts. Those are bounded checklist prompts, not proof that an independent
+search found every omitted authority.
 
 ## 13. Source and model hierarchy
 
@@ -1153,4 +1193,3 @@ ProofMark has implemented the central demonstration thesis of VERITAS SG:
 It has not implemented the complete research and production infrastructure needed for a general legal-database quality auditor. In particular, no claim should be made that ProofMark has a comprehensive citator, a calibrated semantic truth model, independent completeness retrieval, statistical bias assurance, or proven production scale.
 
 That boundary does not weaken the hackathon submission. It makes the system's core innovation clearer: ProofMark is an evidence-linked, provenance-aware evaluation framework that knows when it has enough evidence to make a bounded finding and when it must defer to a lawyer.
-

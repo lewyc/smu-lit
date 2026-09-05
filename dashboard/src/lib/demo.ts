@@ -5,16 +5,16 @@ An employer must identify a legitimate proprietary interest before reasonablenes
 All worldwide one-year non-competes are automatically void under [2019] SGHC 96 at [82].
 CLAAS proves that every Singapore-wide restraint is always unreasonable [2010] SGCA 3 at [59].
 Any former employee who contacts a customer necessarily misuses confidential information.
-The Court of Appeal created a mandatory two-year restraint in [2099] SGCA 999.
+Man Financial (S) Pte Ltd v Wong Bark Chuan David [2024] SGHC 29 at [59] requires a legitimate proprietary interest.
 Separately, the PDPA always permits employers to publish former employees' personal data.`
 
 const verdicts: AuditVerdict[] = [
-  'verified',
-  'verified',
+  'unverified',
+  'unverified',
   'context_review',
   'context_review',
   'unsupported',
-  'likely_fabricated',
+  'unsupported',
   'out_of_scope',
 ]
 
@@ -28,7 +28,7 @@ function claim(order: number): AuditedClaim {
     '[2019] SGHC 96',
     '[2010] SGCA 3',
     null,
-    '[2099] SGCA 999',
+    '[2024] SGHC 29',
     null,
   ]
   const propositions = [
@@ -37,7 +37,7 @@ function claim(order: number): AuditedClaim {
     'geographic_scope',
     'geographic_scope',
     'confidential_information',
-    'duration_scope',
+    'legitimate_proprietary_interest',
     'outside_corpus_scope',
   ]
   const rationales: Record<AuditVerdict, string> = {
@@ -49,39 +49,9 @@ function claim(order: number): AuditedClaim {
     out_of_scope: 'The claim is outside the declared employment restraint-of-trade corpus.',
   }
   const citation = citations[order - 1]
-  const evidence = order <= 4
-    ? [{
-        relation: 'supports' as const,
-        score: order === 1 ? 0.72 : 0.54,
-        explanation: 'Stored annotation explicitly supports this proposition.',
-        authority_citation: citation!,
-        case_name: order === 1
-          ? 'Shopee Singapore Pte Ltd v Lim Teck Yong'
-          : order === 2
-            ? 'Man Financial (S) Pte Ltd v Wong Bark Chuan David'
-            : order === 3
-              ? 'HT SRL v Wee Shuo Woon'
-              : 'CLAAS Medical Centre Pte Ltd v Ng Boon Ching',
-        official_url: order === 1
-          ? 'https://www.elitigation.sg/gdviewer/s/2024_SGHC_29'
-          : order === 2
-            ? 'https://www.elitigation.sg/gdviewer/s/2007_SGCA_53'
-            : order === 3
-            ? 'https://www.elitigation.sg/gdviewer/s/2019_SGHC_96'
-            : 'https://www.elitigation.sg/gd/s/2010_SGCA_3',
-        officially_sourced: false,
-        ai_supported: false,
-        passage: {
-          id: `demo-${order}`,
-          paragraph_label: order === 1 ? '[18]' : order === 2 ? '[70]' : order === 3 ? '[82]-[84]' : '[59]-[60]',
-          text: order <= 2
-            ? 'The stored pilot passage supports the bounded proposition stated in this claim.'
-            : 'The result in this authority depended on the particular clause and factual context.',
-          supported_propositions: [propositions[order - 1]],
-          limitations: order >= 3 ? ['Fact-sensitive result; no automatic universal rule.'] : [],
-        },
-      }]
-    : []
+  // A disconnected fallback must never invent or paraphrase judgment text.
+  // Start the API to obtain source-hashed, paragraph-anchored evidence.
+  const evidence: AuditedClaim['evidence'] = []
   return {
     order,
     text: texts[order - 1],
@@ -111,11 +81,11 @@ export const savedDemoResult: AuditDetail = {
   parser_used: 'local',
   input_preview: DEMO_ANSWER.slice(0, 120),
   summary_counts: {
-    verified: 2,
+    verified: 0,
     context_review: 2,
-    unsupported: 1,
-    likely_fabricated: 1,
-    unverified: 0,
+    unsupported: 2,
+    likely_fabricated: 0,
+    unverified: 2,
     out_of_scope: 1,
   },
   metrics: {
@@ -139,9 +109,9 @@ export const savedDemoResult: AuditDetail = {
   claims: demoClaims,
   handoff: {
     issue: 'Review non-verified claims before the answer is relied on or sent.',
-    established_points: ['Claims 1 and 2 have proposition-linked pilot passages.'],
+    established_points: ['No judgment passage is bundled into the disconnected fallback.'],
     relevant_authorities: ['[2007] SGCA 53', '[2010] SGCA 3', '[2019] SGHC 96', '[2024] SGHC 29'],
-    unresolved_questions: ['Do the cited holdings fit the actual clause and facts?', 'Re-check the adversarial citation in the official registry.'],
+    unresolved_questions: ['Start the API and rerun against source-hashed corpus evidence.', 'Review the real case-name/citation mismatch.'],
     review_status: 'lawyer_review_required',
   },
   source_label: 'Saved demonstration result',
@@ -150,13 +120,13 @@ export const savedDemoResult: AuditDetail = {
   facts: 'The employee had customer connections and access to confidential information.',
   assurance_policy_version: 'proofmark-veritas-policy-1.0',
   assurance_questions: [
-    { key: 'existence', question: 'Does the authority exist and is it correctly identified?', status: 'flagged', summary: 'One citation has a recorded negative-registry result.', finding_count: 1, failure_levels: [1, 2] },
+    { key: 'existence', question: 'Does the authority exist and is it correctly identified?', status: 'flagged', summary: 'One real citation is paired with the wrong real case name.', finding_count: 1, failure_levels: [2] },
     { key: 'fidelity', question: 'Does the cited material support the proposition?', status: 'flagged', summary: 'One uncited legal assertion lacks proposition-linked support.', finding_count: 1, failure_levels: [3] },
     { key: 'legal_significance', question: 'Does it mean what the AI says, with the legal weight claimed?', status: 'flagged', summary: 'Two claims use absolute language for fact-sensitive authorities.', finding_count: 2, failure_levels: [4] },
     { key: 'completeness', question: 'What material issue or landmark candidate did the AI miss?', status: 'flagged', summary: 'The bounded issue checklist produced lawyer-review prompts.', finding_count: 1, failure_levels: [5] },
   ],
   score_gates: [
-    { gate_id: 'citation_integrity', label: 'Citation integrity gate', status: 'triggered', effect: 'Composite capped at 49', basis_tier: 'A', reason: 'A recorded official negative-registry check identified a likely fabricated authority.' },
+    { gate_id: 'citation_integrity', label: 'Citation integrity gate', status: 'triggered', effect: 'Composite capped by policy', basis_tier: 'A', reason: 'A real citation is paired with a different real case name.' },
     { gate_id: 'unsupported_assertion', label: 'Unsupported assertion gate', status: 'triggered', effect: 'Composite capped at 49', basis_tier: 'A', reason: 'An extracted legal assertion requiring authority had no citation.' },
     { gate_id: 'currency', label: 'Currency gate', status: 'not_assessed', effect: 'No cap applied', basis_tier: 'none', reason: 'No lawyer-approved currency record was available; the system abstained.' },
     { gate_id: 'direct_contradiction', label: 'Direct contradiction gate', status: 'not_assessed', effect: 'No cap applied', basis_tier: 'none', reason: 'Legal NLI is not implemented as a hard gate.' },

@@ -83,7 +83,7 @@ export function AuditDetailPage() {
     audit.original_question ? 'Question: ' + audit.original_question : '',
     audit.facts ? 'Facts: ' + audit.facts : '',
   ].filter(Boolean).join(' ') || audit.input_text
-  const tier0Flags = (audit.flags ?? []).filter((flag) => flag.module !== 'balance_completeness')
+  const tier0Flags = audit.flags ?? []
 
   return (
     <section className="page">
@@ -346,7 +346,7 @@ export function AuditDetailPage() {
                 <details className="evidence-box" key={evidence.passage.id} open={claim.verdict === 'verified'}>
                   <summary>
                     <span><strong>{evidence.authority_citation} · {evidence.passage.paragraph_label}</strong><small>{evidence.relation} · lexical rank {Math.round(evidence.score * 100)}%</small></span>
-                    <span>View exact stored passage</span>
+                    <span>{evidence.passage.text_kind === 'legal_team_summary' ? 'View labelled legal-team summary' : 'View exact stored passage'}</span>
                   </summary>
                   <div className="source-badge-row evidence-badges">
                     {evidence.officially_sourced && <span className="source-badge official">Official SG Courts source</span>}
@@ -354,6 +354,7 @@ export function AuditDetailPage() {
                     {evidence.passage.source_role_reviewed && <span className="source-badge muted">Reviewed role: {evidence.passage.source_role?.replaceAll('_', ' ')}</span>}
                     {evidence.passage.annotation_disagrees && <span className="source-badge warning">Taxonomy disagreement · lawyer review</span>}
                     {!evidence.officially_sourced && !evidence.ai_supported && <span className="source-badge muted">Saved demonstration evidence</span>}
+                    {evidence.passage.text_kind === 'legal_team_summary' && <span className="source-badge warning">Not judgment text · verify at source</span>}
                   </div>
                   <blockquote>{evidence.passage.text}</blockquote>
                   {evidence.passage.limitations.length > 0 && (

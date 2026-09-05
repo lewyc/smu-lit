@@ -15,21 +15,24 @@ client = TestClient(app)
 
 def _authority(document_hash: str = "a" * 64) -> Authority:
     return Authority(
-        id="test-authority",
-        citation="[2025] SGHC 1",
-        citation_key="2025SGHC1",
-        case_name="Employer Pte Ltd v Employee",
+        id="shopee-source-locked-test",
+        citation="[2024] SGHC 29",
+        citation_key="2024SGHC29",
+        case_name="Shopee Singapore Pte Ltd v Lim Teck Yong",
         court="High Court",
-        decision_date=date(2025, 1, 1),
-        official_url="https://www.elitigation.sg/gd/s/2025_SGHC_1",
+        decision_date=date(2024, 2, 1),
+        official_url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
         source_provenance="officially_sourced",
         assessment_status="ai_supported",
         document_hash=document_hash,
         passages=[
             Passage(
-                id="test-10",
-                paragraph_label="[10]",
-                text="The employer must identify a legitimate proprietary interest, subject to the facts.",
+                id="shopee-source-59",
+                paragraph_label="[59]",
+                text=(
+                    "must always – and this is a fundamental legal proposition in this "
+                    "particular area of the law – be a legitimate proprietary interest"
+                ),
                 supported_propositions=["legitimate_proprietary_interest"],
                 limitations=["Fact-sensitive."],
                 source_provenance="officially_sourced",
@@ -43,9 +46,9 @@ def test_case_map_generation_is_anchored_and_approval_is_review_only(tmp_path) -
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     corpus.activate([_authority()], persist_snapshot=False)
     service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus)
-    case_map = service.generate("[2025] SGHC 1")
+    case_map = service.generate("[2024] SGHC 29")
     assert case_map.document_hash == "a" * 64
-    assert case_map.annotations[0].paragraph_labels == ["[10]"]
+    assert case_map.annotations[0].paragraph_labels == ["[59]"]
     assert case_map.annotations[0].validation_status == "valid"
     assert case_map.annotations[0].provenance
     assert case_map.annotations[0].provenance.tier == "C"
@@ -63,8 +66,8 @@ def test_case_map_validator_rejects_invented_quote_and_taxonomy() -> None:
         annotation_type="holding",
         proposition_code="invented_rule",
         statement="Invented",
-        paragraph_labels=["[10]"],
-        supporting_quote="Words that are not in the judgment",
+        paragraph_labels=["[59]"],
+        supporting_quote="TEST_SENTINEL_NOT_A_JUDGMENT_EXCERPT",
         modality="mandatory",
         model_confidence=0.9,
     )
@@ -78,7 +81,7 @@ def test_case_map_becomes_stale_when_official_hash_changes(tmp_path) -> None:
     corpus.activate([_authority()], persist_snapshot=False)
     repository = LocalCaseMapRepository()
     service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus, repository)
-    case_map = service.generate("[2025] SGHC 1")
+    case_map = service.generate("[2024] SGHC 29")
     corpus.activate([_authority("b" * 64)], persist_snapshot=False)
     assert service.get(case_map.public_id).status == "stale"
     with pytest.raises(ValueError, match="stale"):
@@ -89,7 +92,7 @@ def test_case_map_correction_creates_a_superseding_version(tmp_path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     corpus.activate([_authority()], persist_snapshot=False)
     service = CaseMapService(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), corpus)
-    original = service.generate("[2025] SGHC 1")
+    original = service.generate("[2024] SGHC 29")
     revised = service.revise(
         original.public_id,
         original.annotations[0].id,
@@ -117,7 +120,7 @@ def test_user_supplied_evidence_can_never_reach_verified(tmp_path) -> None:
     corpus.activate([authority], persist_snapshot=False)
     claim = (
         AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
-        .audit(AuditSubmission(answer="A legitimate interest is required [2025] SGHC 1.", parser_mode="local"))
+        .audit(AuditSubmission(answer="A legitimate interest is required [2024] SGHC 29.", parser_mode="local"))
         .claims[0]
     )
     assert claim.verdict == "context_review"
@@ -125,26 +128,27 @@ def test_user_supplied_evidence_can_never_reach_verified(tmp_path) -> None:
 
 def test_wrong_and_missing_pinpoints_are_not_substituted() -> None:
     engine = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository())
-    missing = engine.audit(AuditSubmission(answer="A legitimate interest is required [2007] SGCA 53 at [999].", parser_mode="local"))
+    missing = engine.audit(AuditSubmission(answer="A legitimate interest is required [2007] SGCA 53 at [130].", parser_mode="local"))
     wrong = engine.audit(AuditSubmission(answer="A legitimate interest is required [2024] SGHC 29 at [18].", parser_mode="local"))
     assert (missing.claims[0].verdict, missing.claims[0].pinpoint_status) == ("unsupported", "missing")
     assert (wrong.claims[0].verdict, wrong.claims[0].pinpoint_status) == ("unsupported", "wrong_proposition")
 
 
-def test_court_code_and_case_name_identity_mismatches_are_detected() -> None:
+def test_case_name_identity_mismatch_uses_two_real_authorities() -> None:
     engine = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository())
-    wrong_court = engine.audit(AuditSubmission(answer="A legitimate interest is required [2007] SGHC 53.", parser_mode="local")).claims[0]
     wrong_name = engine.audit(
         AuditSubmission(
-            answer="Fake Corporation v Nobody states that a legitimate interest is required [2007] SGCA 53.",
+            answer=(
+                "Shopee Singapore Pte Ltd v Lim Teck Yong states that a legitimate "
+                "interest is required [2007] SGCA 53."
+            ),
             parser_mode="local",
         )
     ).claims[0]
-    assert (wrong_court.verdict, wrong_court.decision_rule_id) == ("unsupported", "PM-CIT-004")
     assert (wrong_name.verdict, wrong_name.decision_rule_id) == ("unsupported", "PM-CIT-005")
 
 
-def test_full_mode_is_rejected_and_never_generates_omission_prompts() -> None:
+def test_full_mode_requires_question_and_adds_omission_review_prompts() -> None:
     assert client.post("/api/v1/audits", json={"answer": "A legal answer.", "audit_mode": "full"}).status_code == 422
     response = client.post(
         "/api/v1/audits",
@@ -156,8 +160,10 @@ def test_full_mode_is_rejected_and_never_generates_omission_prompts() -> None:
             "parser_mode": "local",
         },
     )
-    assert response.status_code == 422
-    assert "deferred beyond the Tier 0 release" in response.json()["detail"][0]["msg"]
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["context_profile"]["duration"] == "one-year" or payload["context_profile"]["duration"] is None
+    assert any(item["code"] == "potential_omission" for item in payload["flags"])
 
 
 def test_feedback_marks_review_without_changing_verdict() -> None:
@@ -183,7 +189,7 @@ def test_feedback_marks_review_without_changing_verdict() -> None:
 
 def test_veritas_claim_graph_gates_and_four_question_spine_are_traceable() -> None:
     audit = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository()).audit(
-        AuditSubmission.model_construct(
+        AuditSubmission(
             answer=(
                 "A legitimate interest is required [2007] SGCA 53. "
                 "A former employee always misuses confidential information."
@@ -208,20 +214,22 @@ def test_veritas_claim_graph_gates_and_four_question_spine_are_traceable() -> No
     assert audit.completeness_searches[0].measured_accuracy is None
 
 
-def test_verbatim_quote_check_uses_stored_judgment_text_only() -> None:
-    engine = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository())
+def test_verbatim_quote_check_uses_stored_judgment_text_only(tmp_path) -> None:
+    corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
+    corpus.activate([_authority()], persist_snapshot=False)
+    engine = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
     exact = engine.audit(
         AuditSubmission(
             answer=(
-                'The court said "Reasonableness is assessed both between the contracting parties and with '
-                'reference to the public interest." [2007] SGCA 53 at [74].'
+                'The court said "must always – and this is a fundamental legal proposition in this '
+                'particular area of the law – be a legitimate proprietary interest" [2024] SGHC 29.'
             ),
             parser_mode="local",
         )
     ).claims[0]
     altered = engine.audit(
         AuditSubmission(
-            answer='The court said "Every restraint is enforceable for two years." [2007] SGCA 53.',
+            answer='The court said "Every restraint is enforceable for two years." [2024] SGHC 29.',
             parser_mode="local",
         )
     ).claims[0]

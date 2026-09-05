@@ -12,6 +12,10 @@ import type {
   CaseMapDetail,
   FeedbackSubmission,
   PractitionerFeedback,
+  HumanReviewDecision,
+  HumanReviewItem,
+  VeritasDemoSuite,
+  VeritasOperatingConfig,
 } from '../types'
 import { DEMO_ANSWER, savedDemoResult } from './demo'
 import { accessToken, apiUrl, dataMode } from './supabase'
@@ -110,6 +114,28 @@ export class ApiAuditRepository implements AuditRepository {
 
   runBenchmark(): Promise<BenchmarkResult> {
     return request('/api/v1/benchmarks/run', { method: 'POST' })
+  }
+
+  getVeritasConfig(): Promise<VeritasOperatingConfig> {
+    return request('/api/v1/veritas/config')
+  }
+
+  runVeritasDemos(): Promise<VeritasDemoSuite> {
+    return request('/api/v1/veritas/demos/run', { method: 'POST' })
+  }
+
+  listHumanReviews(): Promise<HumanReviewItem[]> {
+    return request('/api/v1/veritas/reviews')
+  }
+
+  submitHumanDecision(
+    publicId: string,
+    input: Omit<HumanReviewDecision, 'decided_at' | 'dissent'> & { dissent?: string },
+  ): Promise<HumanReviewItem> {
+    return request('/api/v1/veritas/reviews/' + publicId + '/decisions', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
   }
 
   listAuthorities(): Promise<Authority[]> {

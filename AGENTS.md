@@ -1,319 +1,256 @@
-# ProofMark / VERITAS SG execution brief
-
-## Delivery decision: implement Tier 0 and a bounded Tier 1 demo now
-
-For this project, the current demo target is a complete Tier 0 foundation plus
-a bounded, non-gating Tier 1 contextual-review path. Tier 1 is allowed in the
-demo only over the legally reviewed 25-authority catalogue and its approved
-paragraph-backed Case Maps. The broader 78-case research queue remains offline
-discovery data until each record has an official source, hash, pinpointable
-paragraphs and legal approval.
-
-Tier 2 independent cross-authority omission retrieval and Tier 3 staffed legal
-escalation remain deferred. Do not describe either deferred capability as
-current product behaviour, and do not present Tier 1 review prompts as proof of
-entailment, completeness, controlling status or legal correctness.
+# ProofMark execution brief
 
 ## North-star goal
 
-Deliver a pitch-ready, defensible evaluator that answers the first VERITAS
-question reliably:
+Deliver a pitch-ready, defensible Singapore employment restraint-of-trade
+evaluation demo that can complete this loop from a frozen local snapshot:
 
 ```text
 AI answer + supplied question/facts
--> deterministic citation parsing and identity checks
--> official-source/pinpoint/quote checks against a frozen curated snapshot
--> deterministic treatment, court/jurisdiction and modal-language checks
--> Tier 1 curated Case Map/context checks over approved authorities
--> evidence-linked per-claim status, uncertainty reason and lawyer handoff
+-> atomised legal claims and controlled propositions
+-> deterministic citation and pinpoint checks
+-> approved official-paragraph Case Map evidence check
+-> optional offline candidate-authority retrieval
+-> conservative verdicts, review flags, and a one-minute lawyer handoff
 ```
 
-Tier 0 establishes basic citation and evidence integrity. Tier 1 adds a
-bounded contextual review signal over approved Case Maps; it does **not** decide
-ratio, factual fit, controlling status, completeness, or give legal advice. Both
-tiers must abstain or send a clear review flag when the curated evidence cannot
-support a result.
+The stretch outcome is not an autonomous legal-research system. It is a
+traceable evaluator that can identify both unsupported AI claims and
+*potentially relevant authorities requiring lawyer review*. A lawyer remains
+responsible for controlling status, factual fit, current treatment, and legal
+advice.
 
-Build its interfaces so they may later become product functions: versioned
-evidence, immutable source provenance, tenant-safe data boundaries and
-auditable review decisions. Do not claim production infrastructure exists
-until it has been deployed and tested.
+Build the MVP so its useful functions can graduate into a real product: retain
+clear interfaces, versioned evidence, tenant-safe data boundaries and auditable
+review decisions. Do not claim that production infrastructure exists until it
+is deployed and tested.
 
-## VERITAS alignment and boundaries
-
-The proposal's four questions remain the product architecture:
-
-| Question | VERITAS purpose | Current status |
-| --- | --- | --- |
-| Q1 | Citation existence, identity and pinpoint integrity | **Active: Tier 0** |
-| Q2 | Whether cited material entails the proposition | **Active for demo: Tier 1 constrained retrieval/review** |
-| Q3 | Legal significance, context, authority and calibration | **Bounded Tier 1 review prompts; legal conclusion deferred** |
-| Q4 | Whether relevant authority is missing | Deferred: Tier 2 independent retrieval and review |
+## Product truth: preserve these boundaries
 
 - Scope is Singapore employment restraint-of-trade law only.
-- Primary official judgments and approved paragraph-backed Case Maps are the
-  truth layer. Dataset fields, LLM labels, secondary commentary and lexical
+- An official runtime source, even with an AI-supported paragraph, can reach
+  at most `context_review`. `verified` is reserved for hand-labelled,
+  benchmark-gold fixtures.
+- `likely_fabricated` requires a recorded official negative-registry check;
+  unknown citations are `unverified`, not fabricated.
+- Candidate retrieval discovers research leads. It must not alter a verdict,
+  score, or `verified` status by itself.
+- Describe every retrieved lead as **Potentially relevant authority — requires
+  source and treatment review**. Never call it an omitted, controlling, or
+  supporting authority until human review has established that.
+- Surface and label court level; do not apply a simplistic "SGCA first" rule
+  or declare any authority controlling automatically.
+- Primary official judgments and approved, paragraph-backed Case Maps are the
+  truth layer. Dataset fields, LLM labels, secondary commentary, and lexical
   similarity are discovery aids only.
-- `verified` is reserved for hand-labelled benchmark-gold fixtures. An official
-  runtime source with a possible match can reach at most `context_review`.
-- `likely_fabricated` requires a recorded official negative-registry check.
-  Unknown citations are `unverified`, never fabricated by guesswork.
-- Surface and label court level. Never apply an automatic "SGCA first" rule or
-  declare an authority controlling automatically.
-- Tier A Case Map fields (identity, court, date, paragraph index, citations and
-  statute) may ground deterministic gates. Tier B structural fields are useful
-  context but may not gate alone. Tier C legal judgments (ratio, obiter,
-  material facts and legal significance) are advisory unless a lawyer has
-  specifically reviewed and approved them.
 - SG-LegalCite is an independent Singapore legal-citation benchmark, not an
   SAL product. Its citation paragraph is nearby discussion in the *citing*
   judgment and its principle field is LLM-extracted; neither proves the cited
-  authority's ratio, exact support or current treatment.
+  authority's ratio, exact support, or current treatment.
 
 ## Current baseline
 
-Already in the repository:
+Already implemented in the repository:
 
-- FastAPI assurance engine, React dashboard, local demo mode and optional
-  Supabase persistence.
-- Cited-authority TF-IDF: it ranks passages **within an already-resolved
-  authority**; it cannot retrieve across authorities.
-- SG Courts-only refresh, immutable snapshots, provenance, cached fallback,
-  freshness/re-audit handling, Case Map draft/review workflows and currency
-  controls.
-- A strictly separate, review-gated research-catalogue foundation. It streams
-  the raw SG-LegalCite CSV outside the repository and audit runtime, but its
-  contents do not affect audit verdicts or scores.
-- Supabase schema, RLS policies and dashboard audit/authority/Case Map/
-  benchmark/assurance routes.
+- FastAPI citation-assurance engine, React dashboard, local demo mode and
+  optional Supabase persistence.
+- Cited-authority paragraph ranking: TF-IDF ranks passages **within an
+  already-resolved cited authority**. It does not retrieve across authorities.
+- SG Courts-only automated refresh, immutable snapshots, provenance,
+  background refresh, cached fallback, freshness and re-audit handling.
+- Case Map draft generation, text-PDF import, reviewer correction/approval,
+  feedback, context/modality/pinpoint checks, and currency-review controls.
+- Supabase schema, RLS policies and migrations; dashboard routes for audit,
+  authority, Case Map, benchmark and assurance workflows.
 
-Completed local engineering checks: Ruff, backend tests, catalogue validation,
-TypeScript checks, frontend tests and production build. Local `.env` files are
-ignored.
+Not yet demonstrated locally in this workspace:
 
-### Tier 0 release evidence status (2026-09-06)
+- `uv`, dashboard dependencies, and local `.env` files are absent, so the
+  documented backend/frontend checks have not been run here.
+- No `api/data/frozen_snapshot.json` exists yet.
+- Supabase migrations still require project-owner and legal-review approval
+  before connected-mode deployment.
 
-- The deterministic release benchmark is saved at
-  `api/data/release_evidence/tier0_v1/benchmark.json`: 13/13 fixtures correct,
-  zero trial errors and 1.14 ms P95 over 250 local-parser runs.
-- The disposable local Supabase pgTAP suite is saved at
-  `api/data/release_evidence/tier0_v1/rls.json`: 14/14 tests passed. Never run
-  fixture-writing RLS tests against the shared hosted project.
-- A separate `legal_review.json` is required after the snapshot exists. It must
-  cover exactly six authorities and explicitly confirm source-role and
-  treatment/currency review; a refresh success does not count as legal approval.
-- `python -m app.release_cli check` is the fail-closed release gate. It writes
-  `api/data/release_evidence/tier0_v1/release_status.json` and remains non-zero
-  until the certified snapshot, connected audit record and offline rehearsal
-  are present.
-- `python -m app.offline_rehearsal_cli` refuses gold fixtures and unreviewed
-  data; it can write a rehearsal record only after a certified six-authority
-  snapshot is archived.
-- The latest official refresh attempt is recorded in
-  `api/data/release_evidence/tier0_v1/refresh_attempt.json`. It fell back with
-  zero accepted documents because the official source was unavailable. Do not
-  create a snapshot from benchmark fixtures or research-catalogue metadata.
-- When the source is available, use
-  `python -m app.refresh_cli --tier0-target-pack` so the release snapshot is
-  restricted to the six approved target identities.
-- Tier 0 is not release-complete until a permitted official refresh succeeds,
-  a legal reviewer certifies all six sources and evidence roles, one signed-in
-  Supabase audit is verified after reload, and the offline rehearsal passes.
+## Roadmap
 
-Connected Supabase status (project `zxjaccusnmunjgktzkme`): the pre-existing
-12-table demo schema was captured read-only and verified against the initial
-migration; only that migration was recorded as already applied. Migrations for
-official refresh, audit freshness/currency, Case Maps, and Tier 0 integrity
-provenance are now applied. Existing demo data was preserved (1 organisation,
-1 membership, 4 authorities, 7 passages, 0 audits). A confirmed demo Auth
-membership exists. The project is now migration-clean; do not reset it or use
-`migration repair` without a new schema comparison. Remaining external
-prerequisites are the official frozen refresh, legal approval of source
-records/Case Maps, and a deliberate connected-mode RLS/user-journey exercise.
+### Phase 0 — Baseline and honest product language
 
-## Active roadmap: Tier 0
+1. Install the documented Python/Node dependencies and run Ruff, pytest,
+   TypeScript checks, frontend tests and production build.
+2. Configure local demo environment files without committing secrets.
+3. Update README, Assurance page and pitch material to distinguish:
+   - current cited-authority validation;
+   - proposed cross-authority candidate retrieval; and
+   - lawyer-reviewed legal conclusions.
+4. Run one official refresh with a configured Gemini key and preserve the
+   resulting frozen snapshot for presentation fallback.
 
-### T0.0 - Freeze a curated, offline evidence snapshot
+**Exit criteria:** reproducible local demo; all checks pass; no pitch wording
+claims that candidate discovery is legal verification.
 
-1. Produce one official SG Courts refresh and archive the exact
-   `frozen_snapshot.json`, its source hashes, corpus version, timestamp,
-   refresh manifest and rejected/failed counts.
-2. Create a small case registry with neutral citation, case name, court,
-   official URL, document hash and numbered paragraph index.
-3. Demonstrate an audit with refresh/network disabled. The UI must state that
-   it is using a frozen/cached source.
+### Phase 1 — Acquire and curate offline research data
 
-### T0.1 - Implement deterministic Q1 integrity gates
+1. Confirm licences, terms, permitted reuse and dataset version for every
+   research source before use. Record source, date, licence/terms reference,
+   download hash and owner in a manifest.
+2. Keep the raw SG-LegalCite corpus outside this Git repository and outside
+   user-audit runtime. Do not commit its roughly 1 GB CSV or query it live.
+3. Build a versioned offline import/filter script that identifies
+   restraint-of-trade candidates from SG-LegalCite and any other permitted
+   research metadata.
+4. Begin with 25 high-quality candidates, not broad coverage. For every
+   retained candidate, retrieve the official SG Courts judgment and validate
+   citation, court, URL, date, document hash and numbered paragraphs.
+5. Have legal reviewers create or approve a Case Map for each retained
+   authority: exact paragraphs, controlled propositions, limitations,
+   factual distinctions, authority-role label, source provenance and treatment
+   status.
+6. Export only a compact, versioned, derived candidate snapshot suitable for
+   local demo use.
 
-For every recognised citation, implement and test:
+**Exit criteria:** a documented, legally reviewable curated authority set;
+each displayable candidate has an official source and evidence status.
 
-1. citation parsing and canonical citation/case-name/court consistency;
-2. official corpus identity/existence lookup;
-3. pinpoint existence and exact numbered-paragraph anchoring;
-4. exact quote verification when an answer presents text as a quotation;
-5. statute reference and court/jurisdiction format checks where curated data
-   exists;
-6. hand-curated citator/treatment state where it exists; otherwise return an
-   explicit unknown/review state, not a treatment conclusion; and
-7. deterministic modal parsing (for example, distinguish "may" from "must")
-   and a separate unsupported-legal-assertion flag.
+### Phase 2 — Cross-authority candidate retrieval
 
-Use only records with Tier A evidence for these gates. Keep a machine-readable
-reason and source link for every pass, failure, ambiguity and abstention.
+1. Add a separate pre-built index across the curated candidate snapshot.
+2. Query it using supplied question/facts plus the extracted controlled
+   proposition. Do not treat Gemini output as a factual record; it atomises
+   claims and assigns controlled fields.
+3. Return the top 3–5 results with match rationale, court level, provenance,
+   Case Map status and the mandatory research-lead label.
+4. Keep this path separate from existing cited-authority TF-IDF ranking and
+   from the deterministic verdict rules.
+5. If an uncited candidate is materially relevant, emit a `potential_omission`
+   **review flag**, never a new conclusion or automatic score penalty.
 
-### T0.2 - Safe scoring, verdicts and handoff
+**Exit criteria:** fast offline candidate suggestions that cannot be mistaken
+for verified support or autonomous legal advice.
 
-1. Keep a gate-plus-weight score: critical identity/pinpoint/quote failures
-   cap reliability; non-critical signals cannot erase a gate failure.
-2. Preserve these conservative states:
+### Phase 3 — Runtime evidence and review integration
+
+1. Ensure normal audits read only approved, paragraph-backed Case Map
+   annotations when assessing proposition support, limitations, factual fit,
+   authority role and provenance.
+2. Maintain the current verdict policy:
    - unknown citation: `unverified`;
    - recorded official negative check: `likely_fabricated`;
-   - failed identity, pinpoint or quote: `unsupported`;
-   - qualified, limited, stale or incomplete evidence: `context_review`.
-3. Render the precise reason, official paragraph/source link, frozen-snapshot
-   version, treatment/currency state and a one-minute lawyer-handoff brief.
-4. Existing Gemini claim atomisation may prepare a review display, but it is
-   not a Tier 0 evidence gate, factual record or legal conclusion. Provide a
-   deterministic fallback when it is unavailable.
+   - failed pinpoint or proposition: `unsupported`;
+   - qualified, limited or fact-sensitive support: `context_review`.
+3. Expose currency/treatment state as a review signal. Unreviewed or negative
+   treatment must trigger transparency and lawyer review, not an invented
+   legal conclusion.
+4. Preserve immutable snapshots, Case Map revisions and audit history.
 
-### T0.3 - Build proof before pitch claims
+**Exit criteria:** every verdict and flag links to a traceable source,
+paragraph, version and review state.
 
-1. Hand-label a minimum benchmark containing the five proposal failures:
-   fabricated citation, real citation/wrong case name, accurate quote without
-   legal support, dissent presented as holding, and overruled/negative-
-   treatment authority.
-2. Add ordinary valid and out-of-scope examples. Record expected per-claim
-   gate results, not merely an overall score.
-3. Measure citation-identity and pinpoint precision/recall, quote-check
-   accuracy, false-positive fabrication rate, per-gate confusion matrix and
-   P95 Tier 0 latency. Do not make accuracy claims before measuring them.
-4. Rehearse the frozen snapshot path with a prepared answer containing both
-   good and bad citations.
+### Phase 4 — Evaluation, UX and pitch freeze
 
-### Tier 0 definition of done
+1. Build 15–20 hostile, hand-labelled audit examples spanning fabricated and
+   malformed citations, wrong court code, wrong pinpoint, wrong proposition,
+   overstatement, limiting authority, candidate omission and out-of-scope use.
+2. Measure evaluator quality: citation-identity accuracy, pinpoint accuracy,
+   contextual-support precision, wording/calibration accuracy, false-positive
+   fabrication rate and P95 audit latency.
+3. Measure retrieval separately with Recall@5 and MRR. Good retrieval must
+   never be described as legal correctness.
+4. Polish one audit-detail journey: overall result, per-claim explanation,
+   exact official paragraph, review reason, candidate leads, lawyer handoff,
+   corpus freshness and provenance badges.
+5. Run 250 warmed audits against the frozen snapshot; retain the P95 target
+   below 1.5 seconds. Rehearse without live eLitigation, Gemini or Supabase.
 
-- Offline audit works from an archived, traceable official snapshot.
-- Every implemented Q1 outcome has deterministic evidence, an explainable
-  status and a safe fallback for missing data.
-- The benchmark proves the five planted failure modes and reports measured
-  quality/latency.
-- README, Assurance page and pitch say exactly what Tier 0 checks, and what it
-  defers.
+**Exit criteria:** a one-minute, offline-safe demo with measured performance,
+clear safety explanations and repeatable expected results.
 
-## Active roadmap: Tier 1 demo over the reviewed 25-authority catalogue
+### Phase 5 — After the hackathon
 
-Tier 1 is the next demo milestone after the Tier 0 release gates are stable.
-It is a constrained contextual-review workflow, not an automatic legal-answer
-engine. New Tier 1 work must use a separate, versioned catalogue/index and
-must not silently replace the six-authority Tier 0 snapshot.
+- Durable scheduler/workers and physical retention purge.
+- Deployed Supabase connected mode, production observability and organisation
+  administration.
+- Broader, licensed sources only when organisational licence and terms permit.
+- More legal domains only after independent corpus, benchmark and review plans.
 
-### T1.0 - Approve and load the demo catalogue
+Do not spend MVP time on model fine-tuning, a 7B legal model, live full-corpus
+search, broad multi-domain coverage, automated legal conclusions or training
+on user submissions.
 
-1. Complete legal review for the selected 25 authorities: official URL,
-   citation identity, court/date, document hash, numbered paragraphs, source
-   role, treatment/currency and approved Case Map evidence.
-2. Add a catalogue validator and immutable catalogue version. The active Tier
-   0 corpus remains unchanged; Tier 1 reads the approved catalogue through an
-   explicit research/context repository.
-3. Keep the 78-case queue outside user-audit runtime. It may be used for
-   offline discovery and shadow evaluation, but not for proof, verdicts or
-   omission claims until separately sourced and approved.
+## Product-grade expansion path
 
-### T1.1 - Add constrained contextual review
+The MVP is a safe, local proof of the workflow. The following are deliberate
+upgrade paths for turning the same workflow into a real product. They are not
+current product claims and should be sequenced only after legal, licensing,
+security and operational readiness reviews.
 
-1. Atomise each answer into claims, citations, pinpoints, propositions and
-   modality; keep model output as a proposal, never as evidence.
-2. Retrieve only approved paragraph-backed Case Map evidence from the 25-case
-   catalogue, using facts plus the controlled proposition as the query.
-3. Compare proposition, limitations, factual distinctions and authority role.
-   Use deterministic rules and lawyer-reviewed labels; Legal NLI may provide a
-   review signal but cannot create a `verified` result.
-4. Emit explainable `context_review` reasons such as qualified support,
-   source-role uncertainty, factual mismatch or insufficient approved
-   evidence. Preserve Tier 0 identity/pinpoint/quote gates as hard gates.
-
-### T1.2 - Demo UX and benchmark
-
-1. Add an explicit Tier 1 demo mode or review panel, clearly labelled as
-   contextual review and requiring lawyer confirmation.
-2. Show evidence paragraphs, limitations, source role, treatment state,
-   catalogue version and uncertainty reasons in the handoff.
-3. Extend the adversarial benchmark with proposition mismatch, qualified
-   language, factual distinction, party submission/obiter and source-provenance
-   cases. Report contextual-support precision, review-flag recall and P95
-   latency separately from Tier 0 citation metrics.
-4. Keep Tier 1 failures conservative: they may cap or route to review, but may
-   not promote an ordinary runtime record to `verified`.
-
-### Tier 2 - sampled/escalated, minutes per audit
-
-Deferred: independent cross-authority search, counter-authority and
-"potential omission" detection, superseded-by-superior search, factual
-distinction work and broad treatment analysis. This corrects the prior
-sequencing: cross-authority candidate retrieval is a Tier 2 research workflow,
-not the next live MVP feature.
-
-If later enabled, label every result exactly:
-
-> Potentially relevant authority - requires source and treatment review.
-
-It must never alter an audit score, verdict or `verified` status by itself.
-
-### Tier 3 - bounded human review
-
-Deferred: practitioner resolution of uncertain matters, approval of Tier C
-fields, authoritative ratio/obiter decisions, material-facts analysis and
-contested treatment status. This needs a named legal-review owner, a queue,
-review standards and an audit trail before it is represented as available.
-
-### Research catalogue preparation (offline only)
-
-The 25-authority catalogue is now the Tier 1 demo target once legal review is
-complete. It remains separate from `ActiveCorpusRepository`, never reads raw
-CSV during an audit and must be versioned independently from the Tier 0
-snapshot. The 78-case queue remains a research backlog/shadow index and is not
-shown as proof or as an omitted-authority finding.
-
-## Product-grade expansion path (after the demo)
-
-| Tier 0 now | Later product-grade change |
+| MVP now | Product-grade change |
 | --- | --- |
-| Frozen JSON snapshot and small case registry | Versioned immutable corpus store with millions of paragraph records, source hashes, retrieval dates and historical snapshots |
-| Manual official refresh | Licensed/permitted source connectors, durable ingestion workers, change detection, retries, provenance checks and legal-source contracts |
-| In-case TF-IDF as a non-gating aid | Hybrid full-corpus lexical/vector retrieval, reranking and strict evidence validation |
-| Tier A deterministic checks | Lawyer-approved Case Maps and deterministic rules for reviewed Tier B/C evidence |
-| Local/in-process operations | Queue-backed workers, PostgreSQL/pgvector or search engine, object storage, caches, monitoring and horizontal scaling |
-| Demo authentication | Enterprise SSO, tenant isolation, roles, immutable logs, encryption, retention/deletion controls |
-| Fixed benchmark | Versioned adversarial suite, review sampling, drift monitoring and model/prompt tracking |
-| Basic handoff | Matter-ready report, review tasks and export/API integration |
+| Six gold fixtures plus a small frozen JSON snapshot | Versioned, immutable corpus store with millions of paragraph records, source hashes, retrieval dates and historical snapshots |
+| Manual/eLitigation refresh capped at 25 cases | Licensed and permitted source connectors, durable ingestion workers, change detection, retries, provenance checks and legal-source contracts |
+| TF-IDF within a cited case | Hybrid full-corpus search: lexical retrieval, vector retrieval, reranking, then strict citation/pinpoint validation |
+| Gemini labels selected paragraphs | LLM output remains a proposal; lawyer-reviewed Case Maps and deterministic rules determine product verdicts |
+| In-process scheduler and local memory | Queue-backed workers, Postgres/pgvector or a search engine, object storage, caches, monitoring and horizontally scalable APIs |
+| Demo authentication | Enterprise SSO, tenant isolation, lawyer/reviewer/admin roles, immutable audit logs, encryption, retention and deletion controls |
+| Fixed test fixtures | Continuously versioned benchmarks, adversarial tests, human-review sampling, drift monitoring, and model/prompt version tracking |
+| `potential_omission` prototype | Formal research workflow: candidate authority, relevance explanation, authority hierarchy, treatment status and lawyer disposition |
+| Basic handoff | Matter-ready report with source excerpts, exact pinpoints, uncertainty reasons, review tasks, and export/API integration |
 
-Advance a feature to product use only after rights/source, evidence, safety,
-security, operational and measured-quality gates are met. New domains require
-their own permitted sources, taxonomy, expert-reviewed Case Maps, benchmarks
-and release decision.
+### Product-readiness gates
+
+Advance an MVP feature to product use only when all of these gates are met:
+
+1. **Rights and source gate:** documented licence/terms, source contract where
+   required, provenance manifest and permitted retention/use.
+2. **Evidence gate:** official primary-source record, exact paragraph anchors,
+   reviewed Case Map, authority/treatment metadata and immutable version.
+3. **Safety gate:** deterministic fallback behaviour, no unsupported legal
+   conclusion, clear uncertainty/review messaging and adversarial test coverage.
+4. **Security gate:** authenticated tenant boundary, role checks, audit logs,
+   encryption and tested retention/deletion controls.
+5. **Operational gate:** durable job processing, monitoring, backups, error
+   handling, capacity testing, incident ownership and documented recovery.
+6. **Quality gate:** benchmark thresholds, reviewed error samples, false-positive
+   monitoring and model/prompt/data-version traceability.
+
+### Product roadmap beyond the demo
+
+1. **Data platform:** move compact snapshots into a versioned corpus service;
+   add permitted source connectors and document-level change detection.
+2. **Retrieval platform:** introduce hybrid lexical/vector retrieval and
+   reranking across the approved corpus, while retaining exact evidence and
+   pinpoint checks as the final gate.
+3. **Review operations:** provide reviewer queues, Case Map lifecycle tools,
+   treatment/currency review, assignment, disposition and immutable audit logs.
+4. **Enterprise deployment:** add SSO, organisation administration, least-
+   privilege roles, encryption, data-residency decisions, retention/deletion
+   operations and export/API integrations.
+5. **Continuous assurance:** version datasets, rules and prompts; run
+   regression/adversarial tests, measure drift and sample live outputs for
+   human quality review.
+6. **Domain expansion:** add new legal domains only as independent launches
+   with their own permitted sources, taxonomy, expert-reviewed Case Maps,
+   benchmarks and release gates.
 
 ## Current action plan
 
 | Priority | Action | Likely owner | Definition of done |
 | --- | --- | --- | --- |
-| P0 | Archive an official frozen snapshot and manifest | Engineering + research | Offline audit works; hashes/version/source status visible |
-| P0 | Build/complete the Tier 0 case registry and paragraph index | Engineering + legal research | Every demo authority has official URL, hash, court and numbered paragraphs |
-| P0 | Finish deterministic Q1 gates and reason codes | Engineering | Identity, pinpoint and quote checks are deterministic and tested |
-| P0 | Curate the minimal treatment/negative registry for demo cases | Legal research | Known treatment outcomes have official provenance; all other cases say unknown/review |
-| P0 | Create five planted-failure fixtures and measure Tier 0 | QA + legal research | Per-gate expected results, metrics and P95 recorded |
-| P0 | Correct README/pitch/Assurance claims to Tier 0/Tier 1 scope | Product + engineering | No overstatement of retrieval, legal certainty or SG-LegalCite affiliation |
-| P1 | Approve and version the 25-authority Tier 1 catalogue | Legal research + engineering | Every record has official source, hash, numbered evidence, approved Case Map and reviewer metadata |
-| P1 | Build constrained Tier 1 context/retrieval path | Engineering + legal review | Approved catalogue evidence produces explainable `context_review` prompts without changing Tier 0 identity gates |
-| P1 | Add Tier 1 demo panel and contextual benchmark | Product + QA | Evidence, limitations, source role, treatment and uncertainty are visible; contextual metrics are recorded separately |
-| P1 support | Maintain the 78-case research queue offline | Legal research + engineering | Queue remains metadata-only/shadow retrieval and cannot create proof, omission flags or `verified` results |
-| Deferred Tier 2 | Cross-authority retrieval and `potential_omission` workflow | Engineering + legal review | Start only after Tier 1/2 design and lawyer-review protocol are approved |
-| Deferred Tier 3 | Human escalation/review operations | Product + legal lead | Start only with staffed reviewer workflow and audit standards |
-| Optional infrastructure | Deploy/review Supabase connected mode | Engineering | Migrations applied and migration history reconciled; complete the RLS/user-journey exercise before calling connected mode certified |
+| P0 | Set up `uv`, Node dependencies and local environment files | Engineering | All documented checks run locally; no secrets committed |
+| P0 | Produce and archive a frozen official snapshot | Engineering + research | `frozen_snapshot.json` exists; dashboard works with network unavailable |
+| P0 | Legal sign-off on the six gold fixtures and Case Map labels | Legal research/counsel | Approved source paragraphs, limitations and expected benchmark labels |
+| P0 | Correct README/pitch/Assurance claims | Product + engineering | No SAL affiliation error; discovery and verification are clearly separated |
+| P1 | Create data-source manifest and curated candidate-selection protocol | Research lead | Licences, hashes, source provenance and reviewer status recorded |
+| P1 | Curate first 25 official, restraint-of-trade authorities | Legal research + engineering | Official source and approved/queued Case Map for every candidate |
+| P1 | Build compact offline candidate-index artifact and loader | Engineering | Versioned index is produced offline and never loads raw corpus at audit time |
+| P1 | Add top-3–5 candidate retrieval and `potential_omission` review flag | Engineering + legal review | No candidate changes a score/verdict; labels and provenance render in UI |
+| P2 | Expand hostile benchmark and collect quality metrics | QA + legal research | 15–20 reviewed examples; retrieval and evaluator metrics reported separately |
+| P2 | Polish one audit-detail pitch flow and rehearse it | Product + design | One-minute, frozen-snapshot demo with good and bad citations |
+| Optional | Deploy/review Supabase connected mode | Project owner + engineering | Migrations/RLS reviewed, applied and exercised with demo users |
 
 ## Working rules for contributors and agents
 
-- Read this file and the root README before changing architecture, legal
-  claims, data handling, verdict logic or database policy.
+- Read this file and the root README before changing architecture, legal claims,
+  data handling, verdict logic or database policy.
 - Do not silently broaden scope beyond Singapore employment restraint-of-trade.
 - Do not modify raw source snapshots, approved Case Maps or historical audits;
   create versioned superseding records.
@@ -321,11 +258,16 @@ and release decision.
   third-party legal text.
 - Verify official URLs, neutral citations and numbered paragraph labels before
   presenting evidence as official.
-- Keep model roles constrained: models may atomise claims and propose
-  controlled labels; deterministic code and human review control evidence,
-  verdicts, treatment and legal conclusions.
-- Treat all incomplete/missing evidence as `unverified`, `context_review` or a
-  clearly worded review state - never as a favourable legal conclusion.
-- Update the relevant test and benchmark fixture when altering parser, case
-  registry, Case Map, verdict, scoring or RLS behaviour.
+- Never fabricate or alter a case name, citation, court, paragraph, URL,
+  treatment record or judgment text to make a test or demonstration pass.
+  Synthetic legal authorities must not appear in the corpus or legal fixtures.
+- Fail loudly when required corpus data, source hashes, paragraph anchors,
+  reviewed treatment records or human decisions are missing. Do not generate
+  substitute legal content, weaken an expected result or add a fabricated
+  fixture to conceal the missing evidence.
+- Keep model roles constrained: models may atomise claims and propose controlled
+  labels; deterministic code and human review control evidence, verdicts,
+  treatment and legal conclusions.
+- Update the relevant test and benchmark fixture when altering parser, taxonomy,
+  retrieval, Case Map, verdict or RLS behaviour.
 - Run the verification commands in README before declaring a change complete.

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 from functools import lru_cache
-from pathlib import Path
 
 from app.models import (
     AssuranceQuestionResult,
@@ -16,6 +14,7 @@ from app.models import (
     ScoreGate,
 )
 from app.parsers import normalise_citation
+from app.veritas import load_operating_config
 
 FAILURE_NAMES = {
     1: "Citation hallucination",
@@ -28,8 +27,7 @@ FAILURE_NAMES = {
 
 @lru_cache(maxsize=1)
 def assurance_policy() -> dict[str, object]:
-    path = Path(__file__).resolve().parents[1] / "data" / "assurance_policy.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return load_operating_config().raw["assurance_policy"]
 
 
 def build_claim_graph(claims: list[AuditedClaim]) -> ClaimGraph:

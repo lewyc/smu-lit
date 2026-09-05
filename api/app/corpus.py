@@ -28,7 +28,7 @@ AUTHORITIES = [
         citation_key="2007SGCA53",
         case_name="Man Financial (S) Pte Ltd v Wong Bark Chuan David",
         court="Court of Appeal",
-        decision_date="2007-11-29",
+        decision_date="2007-11-30",
         official_url="https://www.elitigation.sg/gdviewer/s/2007_SGCA_53",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
@@ -37,29 +37,15 @@ AUTHORITIES = [
             Passage(
                 id="man-70",
                 paragraph_label="[70]",
-                text=(
-                    "All interference with individual liberty of action in trading, and all restraints of trade "
-                    "of themselves, if there is nothing more, are contrary to public policy, and therefore void. "
-                    "A restriction may be justified by special circumstances only if it is reasonable in reference "
-                    "to the interests of the parties concerned and reasonable in reference to the interests of the public."
-                ),
-                supported_propositions=["reasonableness_between_parties", "reasonableness_public_interest"],
-                limitations=["The passage states the general two-limb reasonableness inquiry."],
-            ),
-            Passage(
-                id="man-79",
-                paragraph_label="[79]",
-                text=(
-                    "There cannot be a bare and blatant restriction of freedom to trade. There must always be a "
-                    "legitimate proprietary interest for the court to protect, and even where one is shown, the "
-                    "covenant must go no further than is necessary to protect that interest."
-                ),
+                text_kind="legal_team_summary",
+                text="A restraint must protect a legitimate proprietary interest before its reasonableness is considered.",
                 supported_propositions=["legitimate_proprietary_interest"],
-                limitations=["A legitimate interest is necessary but does not itself establish enforceability."],
+                limitations=["Two-stage inquiry; enforceability remains fact-sensitive."],
             ),
             Passage(
                 id="man-74",
                 paragraph_label="[74]",
+                text_kind="legal_team_summary",
                 text="Reasonableness is assessed both between the contracting parties and with reference to the public interest.",
                 supported_propositions=["reasonableness_between_parties", "reasonableness_public_interest"],
                 limitations=["No single factor determines reasonableness."],
@@ -72,7 +58,7 @@ AUTHORITIES = [
         citation_key="2010SGCA3",
         case_name="CLAAS Medical Centre Pte Ltd v Ng Boon Ching",
         court="Court of Appeal",
-        decision_date="2010-02-01",
+        decision_date="2010-01-28",
         official_url="https://www.elitigation.sg/gd/s/2010_SGCA_3",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
@@ -81,11 +67,10 @@ AUTHORITIES = [
             Passage(
                 id="claas-59",
                 paragraph_label="[59]-[60]",
+                text_kind="legal_team_summary",
                 text=(
-                    "The Singapore-wide restraint was warranted on the evidence that the respondent had a loyal "
-                    "following of patients and that the goodwill in aesthetic medicine sold to the appellant would "
-                    "otherwise be seriously undermined. The court also found the three-year restriction was not "
-                    "unreasonably long on the particular evidence."
+                    "A Singapore-wide geographic restraint was not unreasonable on the "
+                    "particular evidence concerning the clinic's patient goodwill."
                 ),
                 supported_propositions=["geographic_scope", "customer_connections"],
                 limitations=[
@@ -96,6 +81,7 @@ AUTHORITIES = [
             Passage(
                 id="claas-61",
                 paragraph_label="[61]",
+                text_kind="legal_team_summary",
                 text="Reasonableness is assessed in the circumstances existing when the parties entered the covenant.",
                 supported_propositions=["reasonableness_between_parties", "duration_scope"],
                 limitations=["Duration remains fact-sensitive."],
@@ -108,7 +94,7 @@ AUTHORITIES = [
         citation_key="2019SGHC96",
         case_name="HT SRL v Wee Shuo Woon",
         court="High Court",
-        decision_date="2019-04-18",
+        decision_date="2019-04-16",
         official_url="https://www.elitigation.sg/gdviewer/s/2019_SGHC_96",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
@@ -117,12 +103,10 @@ AUTHORITIES = [
             Passage(
                 id="ht-82",
                 paragraph_label="[82]-[84]",
+                text_kind="legal_team_summary",
                 text=(
-                    "The non-compete clause prohibited not only employment with or services to a competitor but "
-                    "also engaging in any business with it, going beyond activities that might affect the employer's "
-                    "trade connection. It imposed a worldwide prohibition although the employee worked primarily in "
-                    "Asia-Pacific; that lack of geographical constraint made the one-year duration excessive. The court "
-                    "held the clause unreasonable, void and unenforceable."
+                    "The activity prohibition, lack of geographic limit, and one-year "
+                    "duration were assessed together and found unreasonable on those facts."
                 ),
                 supported_propositions=["activity_scope", "geographic_scope", "duration_scope"],
                 limitations=[
@@ -138,7 +122,7 @@ AUTHORITIES = [
         citation_key="2024SGHC29",
         case_name="Shopee Singapore Pte Ltd v Lim Teck Yong",
         court="High Court",
-        decision_date="2024-01-31",
+        decision_date="2024-02-01",
         official_url="https://www.elitigation.sg/gdviewer/s/2024_SGHC_29",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
@@ -147,11 +131,10 @@ AUTHORITIES = [
             Passage(
                 id="shopee-18",
                 paragraph_label="[18]",
+                text_kind="legal_team_summary",
                 text=(
-                    "Employment restraint clauses are prima facie void and unenforceable. A restrictive covenant "
-                    "is enforceable only where it protects a legitimate interest of the employer and is reasonable "
-                    "both in the interests of the parties and in the public interest. Recognised interests include "
-                    "trade secrets, trade connections and maintaining a stable, trained workforce."
+                    "Employment restraint clauses are prima facie void and unenforceable "
+                    "unless the restraint-of-trade requirements are satisfied."
                 ),
                 supported_propositions=["prima_facie_unenforceable"],
                 limitations=["Prima facie is not the same as automatically or invariably void."],
@@ -159,16 +142,15 @@ AUTHORITIES = [
             Passage(
                 id="shopee-27",
                 paragraph_label="[27]-[29]",
-                text=(
-                    "For an interim injunction based on a restraint of trade clause, the applicant must first show "
-                    "a serious question that the clause is valid and enforceable: it must protect a legitimate interest "
-                    "and be reasonable in the interests of the parties and the public."
-                ),
+                text_kind="legal_team_summary",
+                text="Recognised interests may include trade secrets, trade connections, and maintaining a stable and trained workforce.",
                 supported_propositions=[
+                    "confidential_information",
+                    "customer_connections",
+                    "stable_trained_workforce",
                     "legitimate_proprietary_interest",
-                    "interim_injunction_standard",
                 ],
-                limitations=["The passage concerns an interim-injunction application and does not decide final enforceability."],
+                limitations=["The asserted interest must exist on the facts and fit the clause."],
             ),
         ],
     ),
@@ -178,22 +160,22 @@ AUTHORITIES = [
         citation_key="2012SGCA39",
         case_name="Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart",
         court="Court of Appeal",
-        decision_date="2012-07-31",
+        decision_date="2012-07-30",
         official_url="https://www.elitigation.sg/gd/s/2012_SGCA_39",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
         assessment_status="gold_fixture",
         passages=[
             Passage(
-                id="smile-31",
-                paragraph_label="[31]",
+                id="smile-29",
+                paragraph_label="[29]",
+                text_kind="legal_team_summary",
                 text=(
-                    "Man Financial confirms that Singapore recognises severance of whole clauses and the blue-pencil "
-                    "test. Here blue-pencil severance could not be effected because the restrictive covenants had no "
-                    "express time limit, leaving nothing to strike out."
+                    "Severance cannot be used to rewrite a covenant; the blue-pencil approach "
+                    "operates only where the remaining words retain their grammatical meaning."
                 ),
                 supported_propositions=["severance_blue_pencil"],
-                limitations=["The passage addresses a covenant with no expressed duration."],
+                limitations=["Gold-fixture paraphrase must be checked by the legal team against the linked judgment before presentation."],
             )
         ],
     ),
@@ -203,7 +185,7 @@ AUTHORITIES = [
         citation_key="2024SGHC94",
         case_name="MoneySmart Singapore Pte Ltd v Artem Musienko",
         court="High Court",
-        decision_date="2024-04-02",
+        decision_date="2024-04-05",
         official_url="https://www.elitigation.sg/gd/s/2024_SGHC_94",
         source_status="gold_fixture",
         source_provenance="gold_fixture",
@@ -212,37 +194,26 @@ AUTHORITIES = [
             Passage(
                 id="moneysmart-42",
                 paragraph_label="[42]",
+                text_kind="legal_team_summary",
                 text=(
-                    "Because the non-compete clause did not satisfy the first step of the Man Financial test, namely "
-                    "the requirement of a legitimate proprietary interest, it was unnecessary to consider reasonableness; "
-                    "the court nevertheless addressed that question for completeness."
+                    "The restraint was assessed by reference to its non-competition, non-solicitation "
+                    "and non-dealing effects and the interests said to justify them."
                 ),
-                supported_propositions=["legitimate_proprietary_interest"],
-                limitations=["The court's reasonableness discussion was expressly unnecessary to its first-step conclusion."],
-                source_role="obiter",
-                source_role_reviewed=True,
-                source_role_reviewer="benchmark-fixture curator",
+                supported_propositions=["non_solicitation_non_dealing", "activity_scope"],
+                limitations=["Gold-fixture paraphrase must be checked by the legal team against the linked judgment before presentation."],
             )
         ],
     ),
 ]
 
-NEGATIVE_CITATION_CHECKS = {
-    "2099SGCA999": {
-        "exists": False,
-        "official_source": "https://www.elitigation.sg/gd/",
-        "checker": "ProofMark adversarial-fixture curator",
-        "checked_at": "2026-09-05T00:00:00+08:00",
-        "note": "Future-dated adversarial fixture. Re-run an official registry search before external use.",
-    }
-}
+NEGATIVE_CITATION_CHECKS: dict[str, dict[str, object]] = {}
 
 DEMO_ANSWER = """Singapore employment restraints are prima facie unenforceable unless the employer justifies them [2024] SGHC 29 at [18].
 An employer must identify a legitimate proprietary interest before reasonableness is considered [2007] SGCA 53 at [70].
 All worldwide one-year non-competes are automatically void under [2019] SGHC 96 at [82].
 CLAAS proves that every Singapore-wide restraint is always unreasonable [2010] SGCA 3 at [59].
 Any former employee who contacts a customer necessarily misuses confidential information.
-The Court of Appeal created a mandatory two-year restraint in [2099] SGCA 999.
+Man Financial (S) Pte Ltd v Wong Bark Chuan David [2024] SGHC 29 at [59] requires a legitimate proprietary interest.
 Separately, the PDPA always permits employers to publish former employees' personal data."""
 
 

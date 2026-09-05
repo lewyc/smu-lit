@@ -1,0 +1,255 @@
+{
+  "config_version": "veritas-operating-points-1.0",
+  "scope": "Singapore employment restraint-of-trade assurance pilot",
+  "measurement_policy": {
+    "rule": "A target is never displayed as an achieved figure. Null means unmeasured and must render as unmeasured.",
+    "performance_runs": 250,
+    "latency_targets_ms": {
+      "tier_0": null,
+      "tier_1": null,
+      "tier_2": null,
+      "tier_3": null
+    },
+    "tier_2_sample_rate": null
+  },
+  "calibration": {
+    "confidence_band_boundaries": null,
+    "measured_accuracy_by_confidence_band": null,
+    "held_out_set_version": null,
+    "component_metrics": {
+      "citation_parser": null,
+      "citation_verifier": null,
+      "claim_extractor": null,
+      "legal_nli": null,
+      "context_classifier": null,
+      "currency_checker": null,
+      "completeness_retrieval": null,
+      "composite_evaluator": null
+    },
+    "dashboard_figures_policy": "Only values calculated by the current run or loaded from a versioned measurement artefact may be displayed as measurements.",
+    "final_submission_figures_policy": "Every figure must be labelled as configured, unmeasured, or measured with its method and version."
+  },
+  "assurance_policy": {
+    "policy_version": "proofmark-veritas-policy-1.0",
+    "claim_graph_version": "proofmark-claim-graph-1.0",
+    "score_cap_when_gate_triggers": 49,
+    "weights_validation_status": "indicative_unvalidated_refittable",
+    "weights": {
+      "citation": 30,
+      "proposition": 35,
+      "currency": 20,
+      "balance": 15
+    },
+    "gates": {
+      "citation_integrity": true,
+      "unsupported_assertion": true,
+      "currency": true,
+      "direct_contradiction": false
+    },
+    "issue_graphs": [
+      {
+        "issue_tag": "legitimate_proprietary_interest",
+        "trigger_propositions": [
+          "prima_facie_unenforceable",
+          "legitimate_proprietary_interest",
+          "confidential_information",
+          "customer_connections",
+          "stable_trained_workforce"
+        ],
+        "landmark_candidates": [
+          "[2007] SGCA 53",
+          "[2024] SGHC 29"
+        ],
+        "set_version": "sg-rot-lpi-landmarks-pilot-1",
+        "validation_status": "benchmark-curated; legal-team sign-off required"
+      }
+    ]
+  },
+  "integrity_policy": {
+    "forbid_fabricated_authority_records": true,
+    "forbid_synthetic_judgment_text": true,
+    "missing_corpus_behaviour": "fail_loudly",
+    "official_source_hosts": [
+      "www.elitigation.sg"
+    ],
+    "instruction": "Never fabricate case names, citations, or judgment text to make a test or demonstration pass. Missing or unverifiable corpus data is an error, not an invitation to generate substitute content."
+  },
+  "tiers": [
+    {
+      "tier": 0,
+      "name": "Inline deterministic",
+      "coverage": "all_queries",
+      "execution": "inline",
+      "model_inference": false,
+      "checks": [
+        "citation_parse",
+        "authority_resolution",
+        "case_name_consistency",
+        "court_code_consistency",
+        "pinpoint_existence",
+        "quote_exactness",
+        "modal_parse",
+        "unsupported_assertion",
+        "court_rank",
+        "jurisdiction"
+      ]
+    },
+    {
+      "tier": 1,
+      "name": "Asynchronous semantic",
+      "coverage": "all_queries",
+      "execution": "parallel_per_claim",
+      "model_inference": "optional_bounded",
+      "checks": [
+        "claim_graph",
+        "case_map_constrained_retrieval",
+        "evidence_relation",
+        "context_role",
+        "warranted_modality",
+        "landmark_recall"
+      ]
+    },
+    {
+      "tier": 2,
+      "name": "Sampled deep review",
+      "coverage": "all_escalated_plus_configured_sample",
+      "execution": "background",
+      "model_inference": "optional_ensemble",
+      "checks": [
+        "independent_candidate_retrieval",
+        "reviewed_treatment_traversal",
+        "counter_authority_search",
+        "factual_distinction",
+        "evidence_constrained_adjudication"
+      ]
+    },
+    {
+      "tier": 3,
+      "name": "Qualified human review",
+      "coverage": "highest_uncertainty_and_flagged",
+      "execution": "review_queue",
+      "model_inference": false,
+      "checks": [
+        "qualified_reviewer_assignment",
+        "authoritative_resolution",
+        "second_review",
+        "dissent_capture",
+        "gold_candidate_promotion"
+      ]
+    }
+  ],
+  "demo_sources": [
+    {
+      "source_id": "court-confirmed-fictitious-case-a",
+      "citation": "[2026] SGHC 49",
+      "case_name": "Tan Hai Peng Micheal and another (as the executors of the estate of Tan Thuan Teck, deceased) v Tan Cheong Joo and another and other matters",
+      "official_url": "https://www.elitigation.sg/gd/s/2026_SGHC_49",
+      "paragraph_label": "[24]",
+      "text": "to prevent further dissemination of false information, I refrain from repeating the actual citations of the Fictitious Authorities in this judgment.",
+      "sha256": "d5c7ecc743c842ae7702289ac869beb581cd3da68edc55131575639e4b06444b"
+    },
+    {
+      "source_id": "court-confirmed-case-a-nonexistence",
+      "citation": "[2026] SGHC 49",
+      "case_name": "Tan Hai Peng Micheal and another (as the executors of the estate of Tan Thuan Teck, deceased) v Tan Cheong Joo and another and other matters",
+      "official_url": "https://www.elitigation.sg/gd/s/2026_SGHC_49",
+      "paragraph_label": "[10]",
+      "text": "when put together, Case A with that name and that neutral citation did not exist.",
+      "sha256": "b107d8ce6b47b48214e869cc530320fccb13334a792fd27df992b3bbf919558a"
+    },
+    {
+      "source_id": "shopee-legitimate-interest",
+      "citation": "[2024] SGHC 29",
+      "case_name": "Shopee Singapore Pte Ltd v Lim Teck Yong",
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_29",
+      "paragraph_label": "[59]",
+      "text": "must always – and this is a fundamental legal proposition in this particular area of the law – be a legitimate proprietary interest",
+      "sha256": "79cbc5fd702fb0cc6127b467c9af09eca8aa008e9bdfd5341e2d1a47ed02a60a"
+    },
+    {
+      "source_id": "man-financial-non-majority",
+      "citation": "[2007] SGCA 53",
+      "case_name": "Man Financial (S) Pte Ltd v Wong Bark Chuan David",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2007_SGCA_53",
+      "paragraph_label": "[130]",
+      "text": "the dissenting judge in the Ontario Court of Appeal, Sharpe JA, whilst recognising the need for caution",
+      "sha256": "19e08dd96a5fa3f695c50f22a3bbd0847b29d35670606425fc409040ebd4aa64"
+    },
+    {
+      "source_id": "smile-negative-treatment",
+      "citation": "[2012] SGCA 39",
+      "case_name": "Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart",
+      "official_url": "https://www.elitigation.sg/gd/gd/2012_SGCA_39/pdf",
+      "paragraph_label": "[33]",
+      "text": "the Supreme Court of Canada subsequently rejected the application of notional severance for restrictive covenants in the employment context",
+      "sha256": "9fc270327a586434d3ecabf24b212c08bd01e2338c7a2593dc28fff69c6a8a01"
+    }
+  ],
+  "demos": [
+    {
+      "id": "demo_1",
+      "title": "Court-confirmed fictitious authority",
+      "detection_tier": 0,
+      "expected_code": "court_confirmed_fictitious",
+      "expected_verdict": "likely_fabricated",
+      "source_ids": [
+        "court-confirmed-fictitious-case-a",
+        "court-confirmed-case-a-nonexistence"
+      ],
+      "input": "Case A, whose citation the Singapore High Court deliberately withheld to prevent propagation of false information, is presented as authority."
+    },
+    {
+      "id": "demo_2",
+      "title": "Real citation, wrong case name",
+      "detection_tier": 0,
+      "expected_code": "case_name_mismatch",
+      "expected_verdict": "unsupported",
+      "source_ids": [
+        "shopee-legitimate-interest"
+      ],
+      "input": "Man Financial (S) Pte Ltd v Wong Bark Chuan David [2024] SGHC 29 at [59] requires a legitimate proprietary interest."
+    },
+    {
+      "id": "demo_3",
+      "title": "Accurate quote, no support",
+      "detection_tier": 1,
+      "expected_code": "verified_quote_no_support",
+      "expected_verdict": "unsupported",
+      "source_ids": [
+        "shopee-legitimate-interest"
+      ],
+      "input": "The words \"must always – and this is a fundamental legal proposition in this particular area of the law – be a legitimate proprietary interest\" prove that every worldwide geographic restraint is reasonable [2024] SGHC 29 at [59].",
+      "asserted_proposition": "geographic_scope",
+      "source_proposition": "legitimate_proprietary_interest"
+    },
+    {
+      "id": "demo_4",
+      "title": "Non-majority reasoning presented as the holding",
+      "detection_tier": 1,
+      "expected_code": "non_majority_as_holding",
+      "expected_verdict": "context_review",
+      "source_ids": [
+        "man-financial-non-majority"
+      ],
+      "input": "Man Financial held that \"the dissenting judge in the Ontario Court of Appeal, Sharpe JA, whilst recognising the need for caution\" stated Singapore law [2007] SGCA 53 at [130].",
+      "claimed_role": "holding",
+      "source_role": "quoted_non_majority"
+    },
+    {
+      "id": "demo_5",
+      "title": "Later authority rejects the relied-on approach",
+      "detection_tier": 2,
+      "expected_code": "approved_negative_treatment",
+      "expected_verdict": "context_review",
+      "source_ids": [
+        "smile-negative-treatment"
+      ],
+      "input": "The New Solutions approach to notional severance governs employment restraints.",
+      "issue_tag": "severance_blue_pencil",
+      "treatment": "rejects_application",
+      "target_authority": "Transport North American Express Inc v New Solutions Financial Corp [2004] 1 SCR 249",
+      "later_authority": "Shafron v KRG Insurance Brokers (Western) Inc (2009) 301 DLR (4th) 522",
+      "treatment_note": "This fixture demonstrates reviewed issue-specific negative treatment. It does not relabel the relationship as a formal overruling."
+    }
+  ]
+}

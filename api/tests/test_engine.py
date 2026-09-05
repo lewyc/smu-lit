@@ -23,22 +23,25 @@ def automated_engine(snapshot_path: Path) -> AuditEngine:
     corpus.activate(
         [
             Authority(
-                id="auto-2025",
-                citation="[2025] SGHC 101",
-                citation_key="2025SGHC101",
-                case_name="Automatic Example Pte Ltd v Employee",
+                id="shopee-source-locked",
+                citation="[2024] SGHC 29",
+                citation_key="2024SGHC29",
+                case_name="Shopee Singapore Pte Ltd v Lim Teck Yong",
                 court="Singapore HC",
-                decision_date="2025-01-01",
-                official_url="https://www.elitigation.sg/gd/s/2025_SGHC_101",
+                decision_date="2024-02-01",
+                official_url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
                 source_status="officially_sourced",
                 source_provenance="officially_sourced",
                 assessment_status="ai_supported",
                 document_hash="a" * 64,
                 passages=[
                     Passage(
-                        id="auto-1",
-                        paragraph_label="[1]",
-                        text="An employer must establish a legitimate proprietary interest.",
+                        id="shopee-source-59",
+                        paragraph_label="[59]",
+                        text=(
+                            "must always – and this is a fundamental legal proposition in this "
+                            "particular area of the law – be a legitimate proprietary interest"
+                        ),
                         supported_propositions=["legitimate_proprietary_interest"],
                         source_provenance="officially_sourced",
                         assessment_status="ai_supported",
@@ -85,7 +88,6 @@ def test_gold_fixture_pack_exercises_expected_verdicts() -> None:
         ("All worldwide restraints are automatically void [2019] SGHC 96.", "context_review"),
         ("Singapore-wide restraints are always unreasonable [2010] SGCA 3.", "context_review"),
         ("Confidential information is always misused.", "unsupported"),
-        ("A two-year rule exists [2099] SGCA 999.", "likely_fabricated"),
         ("The PDPA permits publication of personal data.", "out_of_scope"),
     ]
     assert [engine.audit(AuditSubmission(answer=text, parser_mode="local")).claims[0].verdict for text, _ in answers] == [
@@ -96,7 +98,7 @@ def test_gold_fixture_pack_exercises_expected_verdicts() -> None:
 def test_automatically_sourced_evidence_can_never_be_verified(tmp_path: Path) -> None:
     audit = automated_engine(tmp_path / "snapshot.json").audit(
         AuditSubmission(
-            answer="A legitimate interest is required [2025] SGHC 101.",
+            answer="A legitimate interest is required [2024] SGHC 29.",
             parser_mode="local",
         )
     )
@@ -107,11 +109,11 @@ def test_automatically_sourced_evidence_can_never_be_verified(tmp_path: Path) ->
 
 
 def test_unknown_citation_is_not_called_fabricated_without_negative_check() -> None:
-    audit = gold_engine().audit(AuditSubmission(answer="A restraint is invalid [2025] SGHC 999.", parser_mode="local"))
+    audit = gold_engine().audit(AuditSubmission(answer="A restraint is invalid [2026] SGHC 49.", parser_mode="local"))
     assert audit.claims[0].verdict == "unverified"
 
 
-def test_direct_quote_mismatch_is_an_unsupported_deterministic_gate() -> None:
+def test_quote_check_fails_loudly_when_the_retained_snapshot_lacks_the_pinpoint() -> None:
     audit = gold_engine().audit(
         AuditSubmission(
             answer='"Invented words" [2007] SGCA 53 at [79] establish a legitimate proprietary interest.',
@@ -119,7 +121,7 @@ def test_direct_quote_mismatch_is_an_unsupported_deterministic_gate() -> None:
         )
     )
     claim = audit.claims[0]
-    assert (claim.verdict, claim.quote_status, claim.decision_rule_id) == ("unsupported", "mismatch", "PM-QUO-001")
+    assert (claim.verdict, claim.quote_status, claim.decision_rule_id) == ("unsupported", "unresolved", "PM-CIT-008")
 
 
 def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> None:

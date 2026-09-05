@@ -15,21 +15,24 @@ from app.research_catalog import CATALOGUE_TOOL_VERSION, CatalogueValidationErro
 
 def _authority() -> Authority:
     return Authority(
-        id="catalogue-authority",
-        citation="[2025] SGHC 1",
-        citation_key="2025SGHC1",
-        case_name="Employer Pte Ltd v Employee",
+        id="catalogue-man-financial",
+        citation="[2007] SGCA 53",
+        citation_key="2007SGCA53",
+        case_name="Man Financial (S) Pte Ltd v Wong Bark Chuan David",
         court="High Court",
-        decision_date=date(2025, 1, 1),
-        official_url="https://www.elitigation.sg/gd/s/2025_SGHC_1",
+        decision_date=date(2007, 11, 30),
+        official_url="https://www.elitigation.sg/gdviewer/s/2007_SGCA_53",
         source_provenance="officially_sourced",
         assessment_status="ai_supported",
         document_hash="a" * 64,
         passages=[
             Passage(
-                id="catalogue-10",
-                paragraph_label="[10]",
-                text="The employer must identify a legitimate proprietary interest, subject to the facts.",
+                id="man-source-130",
+                paragraph_label="[130]",
+                text=(
+                    "the dissenting judge in the Ontario Court of Appeal, Sharpe JA, "
+                    "whilst recognising the need for caution"
+                ),
                 supported_propositions=["legitimate_proprietary_interest"],
                 limitations=["Fact-sensitive."],
                 source_provenance="officially_sourced",
@@ -47,11 +50,11 @@ def _write_catalogue(directory: Path) -> Path:
     approved_map = service.approve(service.generate(authority.citation).public_id, reviewer_id=uuid4())
     authorities = [
         {
-            "catalogue_id": "catalogue-2025sghc1",
+            "catalogue_id": "catalogue-2007sgca53",
             "candidate_name": authority.case_name,
             "discovery": {
                 "source_dataset": "SG-LegalCite",
-                "citing_judgments": [{"citation": "[2024] SGHC 10", "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_10"}],
+                "citing_judgments": [{"citation": "[2024] SGHC 29", "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_29"}],
                 "matched_terms": ["legitimate proprietary interest"],
                 "suggested_propositions": ["legitimate_proprietary_interest"],
             },
@@ -79,14 +82,14 @@ def _write_catalogue(directory: Path) -> Path:
 def test_catalogue_accepts_approved_exact_case_map_without_touching_runtime(tmp_path: Path) -> None:
     catalogue = _write_catalogue(tmp_path)
     loaded = load_catalogue(catalogue)
-    assert loaded[0]["authority"]["citation"] == "[2025] SGHC 1"
+    assert loaded[0]["authority"]["citation"] == "[2007] SGCA 53"
     assert ActiveCorpusRepository(tmp_path / "fresh-runtime.json").list_authorities() == []
 
 
 def test_catalogue_rejects_unanchored_case_map(tmp_path: Path) -> None:
     catalogue = _write_catalogue(tmp_path)
     authorities = json.loads((catalogue / "approved_authorities.json").read_text(encoding="utf-8"))
-    authorities[0]["case_map"]["annotations"][0]["supporting_quote"] = "Invented quotation"
+    authorities[0]["case_map"]["annotations"][0]["supporting_quote"] = "TEST_SENTINEL_NOT_A_JUDGMENT_EXCERPT"
     (catalogue / "approved_authorities.json").write_text(json.dumps(authorities), encoding="utf-8")
     manifest = json.loads((catalogue / "catalogue_manifest.json").read_text(encoding="utf-8"))
     manifest["approved_authorities_sha256"] = canonical_json_hash(authorities)
@@ -118,29 +121,29 @@ def test_shortlist_streams_latin1_metadata_without_emitting_citation_paragraphs(
     ]
     rows = [
         {
-            "Judgment_URL": "https://www.elitigation.sg/gd/s/2024_SGHC_1",
-            "Judgment_Reference": "[2024] SGHC 1",
-            "Case Name": "First Citing Judgment [2024] SGHC 1",
+            "Judgment_URL": "https://www.elitigation.sg/gd/s/2024_SGHC_29",
+            "Judgment_Reference": "[2024] SGHC 29",
+            "Case Name": "Shopee Singapore Pte Ltd v Lim Teck Yong [2024] SGHC 29",
             "Key Principles Illustrated": "Legitimate proprietary interest in a restrictive covenant",
             "Issue": "Employment restraint",
             "Issue Group": "Employment",
-            "Cited Case": "Example Candidate [2020] SGCA 1",
+            "Cited Case": "Man Financial (S) Pte Ltd v Wong Bark Chuan David [2007] SGCA 53",
             "Paragraph": "Raw nearby discussion must never be emitted.",
         },
         {
-            "Judgment_URL": "https://www.elitigation.sg/gd/s/2025_SGHC_2",
-            "Judgment_Reference": "[2025] SGHC 2",
-            "Case Name": "Second Citing Judgment [2025] SGHC 2",
+            "Judgment_URL": "https://www.elitigation.sg/gd/s/2019_SGHC_96",
+            "Judgment_Reference": "[2019] SGHC 96",
+            "Case Name": "HT SRL v Wee Shuo Woon [2019] SGHC 96",
             "Key Principles Illustrated": "Customer connection",
             "Issue": "Restrictive covenant",
             "Issue Group": "Employment",
-            "Cited Case": "Example Candidate [2020] SGCA 1",
+            "Cited Case": "Man Financial (S) Pte Ltd v Wong Bark Chuan David [2007] SGCA 53",
             "Paragraph": "Another raw paragraph.",
         },
         {
-            "Judgment_URL": "https://www.elitigation.sg/gd/s/2025_SGHC_3",
-            "Judgment_Reference": "[2025] SGHC 3",
-            "Case Name": "Third Citing Judgment [2025] SGHC 3",
+            "Judgment_URL": "https://www.elitigation.sg/gd/s/2012_SGCA_39",
+            "Judgment_Reference": "[2012] SGCA 39",
+            "Case Name": "Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart [2012] SGCA 39",
             "Key Principles Illustrated": "Restrictive covenant",
             "Issue": "Employment restraint",
             "Issue Group": "Employment",
@@ -148,9 +151,9 @@ def test_shortlist_streams_latin1_metadata_without_emitting_citation_paragraphs(
             "Paragraph": "Foreign authority is not a Singapore catalogue lead.",
         },
         {
-            "Judgment_URL": "https://www.elitigation.sg/gd/s/2020_SGCA_1",
-            "Judgment_Reference": "[2020] SGCA 1",
-            "Case Name": "Example Candidate [2020] SGCA 1",
+            "Judgment_URL": "https://www.elitigation.sg/gdviewer/s/2007_SGCA_53",
+            "Judgment_Reference": "[2007] SGCA 53",
+            "Case Name": "Man Financial (S) Pte Ltd v Wong Bark Chuan David [2007] SGCA 53",
             "Key Principles Illustrated": "",
             "Issue": "",
             "Issue Group": "",
@@ -163,8 +166,8 @@ def test_shortlist_streams_latin1_metadata_without_emitting_citation_paragraphs(
         writer.writeheader()
         writer.writerows(rows)
     shortlist = build_shortlist(dataset, limit=5, chunk_size=1)
-    assert shortlist["candidates"][0]["candidate_name"] == "Example Candidate [2020] SGCA 1"
-    assert shortlist["candidates"][0]["candidate_citation"] == "[2020] SGCA 1"
+    assert shortlist["candidates"][0]["candidate_name"] == "Man Financial (S) Pte Ltd v Wong Bark Chuan David [2007] SGCA 53"
+    assert shortlist["candidates"][0]["candidate_citation"] == "[2007] SGCA 53"
     assert shortlist["candidates"][0]["match_count"] == 2
     assert len(shortlist["candidates"]) == 1
     assert "Paragraph" not in json.dumps(shortlist)
