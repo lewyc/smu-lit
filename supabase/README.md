@@ -2,18 +2,44 @@
 
 Target project: `zxjaccusnmunjgktzkme`.
 
-The source of truth is split into `schemas/01_tables.sql` and
-`schemas/02_security.sql`; `seed.sql` contains only public case-law pilot
-data. It does not create Auth users or organisations.
+The migration files under `supabase/migrations/` are the deployment source of
+truth. `seed.sql` contains only public case-law pilot data; it does not create
+Auth users or organisations. The `schemas/` files are reference material for
+review and are not a substitute for migration history.
 
-## Apply
+## Current project state
 
-Install the Supabase CLI, link the project, create a migration with
-`supabase migration new proofmark_initial`, then place the reviewed schema SQL
-in that generated migration. Apply with `supabase db push`, seed, and run:
+The hosted project has been reconciled without deleting its existing demo
+organisation, membership, authorities, or passages. The initial schema was
+verified against a read-only remote dump and recorded as migration
+`20260905073113`; migrations through
+`20260906020000_tier0_integrity_provenance.sql` are applied.
+
+Verify status with:
 
 ```powershell
-supabase test db
+$cachePath = Join-Path $env:TEMP "proofmark-npm-cache"
+npx.cmd --yes --cache $cachePath supabase@latest migration list
+```
+
+For future changes, create a timestamped migration, test it locally, review
+the SQL, and deploy only with:
+
+```powershell
+npx.cmd --yes --cache $cachePath supabase@latest db push
+```
+
+Do not run `migration repair` unless the live schema has been independently
+dumped and the exact migration already exists there. Never use `db reset` on
+this project.
+
+The generated `remote_public_schema.sql` is a schema-only reconciliation
+artifact; it contains no row data and is not read by the application.
+
+Run the database tests after Docker is available:
+
+```powershell
+npx.cmd --yes --cache $cachePath supabase@latest test db
 ```
 
 Do not place the database password, access token, or service-role/secret key in

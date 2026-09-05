@@ -143,6 +143,11 @@ class SupabaseAuditRepository:
                     "rationale": claim.rationale,
                     "missing_evidence": claim.missing_evidence,
                     "escalation_required": claim.lawyer_review_required,
+                    "pinpoint_status": claim.pinpoint_status,
+                    "quote_status": claim.quote_status,
+                    "citation_identity_status": claim.citation_identity_status,
+                    "source_role_status": claim.source_role_status,
+                    "currency_status": claim.currency_status,
                 }
             )
         claim_response = self.client.table("audit_claims").insert(claim_rows).execute()

@@ -30,17 +30,7 @@ export function AuditDetailPage() {
   if (error) return <section className="page"><ErrorPanel message={error} /></section>
   if (!audit) return <section className="page"><LoadingPanel label="Loading evidence report" /></section>
 
-  const metricData = [
-    { name: 'Citation integrity', value: audit.metrics.citation_integrity },
-    { name: 'Grounded coverage', value: audit.metrics.grounded_coverage },
-    { name: 'Contextual support', value: audit.metrics.contextual_support },
-  ]
-  const modules = [
-    ['Citation integrity', audit.metrics.citation_integrity_module],
-    ['Propositional accuracy', audit.metrics.propositional_accuracy_module],
-    ['Relevance / currency', audit.metrics.relevance_currency_module],
-    ['Balance / completeness', audit.metrics.balance_completeness_module],
-  ] as const
+  const metricData = [{ name: 'Citation integrity', value: audit.metrics.citation_integrity }]
 
   async function submitFeedback(claimOrder: number) {
     if (!feedbackText.trim()) return setFeedbackMessage('Explain what appears inaccurate.')
@@ -78,13 +68,14 @@ export function AuditDetailPage() {
     audit.original_question ? 'Question: ' + audit.original_question : '',
     audit.facts ? 'Facts: ' + audit.facts : '',
   ].filter(Boolean).join(' ') || audit.input_text
+  const tier0Flags = (audit.flags ?? []).filter((flag) => flag.module !== 'balance_completeness')
 
   return (
     <section className="page">
       <Link to="/audits" className="back-link"><ArrowLeft size={15} />Back to worklist</Link>
       <PageHeader
-        eyebrow="Completed audit"
-        title="Evidence-linked assurance report"
+        eyebrow="Completed Tier 0 audit"
+        title="Citation-integrity report"
         description={`${audit.claims.length} claims · ${audit.processing_duration_ms} ms · ${audit.parser_used} parser · ${audit.audit_mode === 'full' ? 'full contextual audit' : 'citation-only audit'}`}
         action={
           <div className="audit-header-actions">
@@ -131,7 +122,7 @@ export function AuditDetailPage() {
       </section>
       <div className="detail-top-grid">
         <div className="panel metric-chart">
-          <div><p className="eyebrow">Transparent metrics</p><h2>Audit posture</h2></div>
+          <div><p className="eyebrow">Tier 0 metric</p><h2>Citation integrity</h2></div>
           <div className="chart-wrap">
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={metricData} layout="vertical" margin={{ left: 8, right: 22 }}>
@@ -144,7 +135,7 @@ export function AuditDetailPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="metric-note">These are coverage indicators, not a probability that the legal answer is correct.</p>
+          <p className="metric-note">This is a deterministic evidence-integrity indicator, not a probability that the legal answer is correct.</p>
         </div>
         <div className="panel provenance-panel">
           <p className="eyebrow">Provenance</p>
@@ -164,24 +155,12 @@ export function AuditDetailPage() {
         </div>
       </div>
 
-      <section className="module-score-grid" aria-label="Framework module scores">
-        {modules.map(([label, module]) => (
-          <div className="panel module-score" key={label}>
-            <p className="eyebrow">{module?.weight ?? 0}% framework weight</p>
-            <h3>{label}</h3>
-            <strong>{module?.assessed ? `${module.score}%` : 'Not assessed'}</strong>
-            {!module?.assessed && <small>{module?.reason_not_assessed ?? 'This dimension was unavailable.'}</small>}
-          </div>
-        ))}
-        {audit.audit_mode === 'full' && <div className="overall-score"><span>Overall score</span><strong>{audit.metrics.overall_score == null ? 'Withheld' : `${audit.metrics.overall_score}%`}</strong><small>Shown only when every weighted module was assessed.</small></div>}
-      </section>
-
-      {(audit.flags?.length ?? 0) > 0 && (
+      {tier0Flags.length > 0 && (
         <section id="review-prompts" className="panel framework-flags">
-          <p className="eyebrow">Context, omissions and balance</p>
+          <p className="eyebrow">Tier 0 review flags</p>
           <h2>Lawyer review prompts</h2>
           <p className="prompt-intro">Each prompt links to the claim or submitted context that triggered it.</p>
-          {audit.flags!.map((flag, index) => {
+          {tier0Flags.map((flag, index) => {
             const referencedClaim = flag.claim_order == null
               ? undefined
               : audit.claims.find((claim) => claim.order === flag.claim_order)
@@ -230,7 +209,10 @@ export function AuditDetailPage() {
                 <span><strong>Citation</strong>{claim.citation ?? 'No citation supplied'} {claim.pinpoint ?? ''}</span>
                 <span><strong>Parser confidence</strong>{Math.round(claim.parser_confidence * 100)}%</span>
                 <span><strong>Language modality</strong>{claim.modality ?? 'not assessed'}</span>
+                <span><strong>Citation identity</strong>{claim.citation_identity_status?.replaceAll('_', ' ') ?? 'not assessed'}</span>
                 <span><strong>Pinpoint</strong>{claim.pinpoint_status?.replaceAll('_', ' ') ?? 'not assessed'}</span>
+                <span><strong>Direct quote</strong>{claim.quote_status?.replaceAll('_', ' ') ?? 'not present'}</span>
+                <span><strong>Source role</strong>{claim.source_role_status?.replaceAll('_', ' ') ?? 'unreviewed'}</span>
                 <span><strong>Currency</strong>{claim.currency_status?.replaceAll('_', ' ') ?? 'not verified'}</span>
                 <span><strong>Decision rule</strong>{claim.decision_rule_id ?? 'legacy result'}</span>
               </div>
@@ -250,6 +232,7 @@ export function AuditDetailPage() {
                   <div className="source-badge-row evidence-badges">
                     {evidence.officially_sourced && <span className="source-badge official">Official SG Courts source</span>}
                     {evidence.ai_supported && <span className="source-badge ai">AI-supported proposition</span>}
+                    {evidence.passage.source_role_reviewed && <span className="source-badge muted">Reviewed role: {evidence.passage.source_role?.replaceAll('_', ' ')}</span>}
                     {evidence.passage.annotation_disagrees && <span className="source-badge warning">Taxonomy disagreement · lawyer review</span>}
                     {!evidence.officially_sourced && !evidence.ai_supported && <span className="source-badge muted">Saved demonstration evidence</span>}
                   </div>

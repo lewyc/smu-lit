@@ -1,0 +1,12 @@
+{
+  "release": "tier0-v1-citation-integrity",
+  "status": "passed",
+  "executed_at": "2026-09-05T18:02:33.1179801Z",
+  "environment": "local Supabase Postgres",
+  "command": "supabase test db --local",
+  "test_count": 14,
+  "passed_count": 14,
+  "failed_count": 0,
+  "shared_hosted_project_used": false,
+  "notes": "Fixture-writing pgTAP tests ran only against the disposable local database."
+}

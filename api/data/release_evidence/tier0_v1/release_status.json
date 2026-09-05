@@ -1,0 +1,38 @@
+{
+  "release": "tier0-v1-citation-integrity",
+  "release_ready": false,
+  "checked_at": "2026-09-05T18:11:26.266817+00:00",
+  "gates": {
+    "official_six_authority_snapshot": {
+      "status": "blocked",
+      "reason": "Missing certified snapshot: data\\frozen_snapshot.json; latest official refresh fell back: Refresh failed (RuntimeError); retained sg-employment-restraints-auto-empty.1."
+    },
+    "legal_source_review": {
+      "status": "pending",
+      "reason": "Legal approval can be recorded only after the official snapshot exists and validates."
+    },
+    "benchmark": {
+      "status": "passed",
+      "artifact": "data\\release_evidence\\tier0_v1\\benchmark.json",
+      "fixture_count": 13,
+      "correct_count": 13,
+      "error_count": 0,
+      "p95_latency_ms": 1.14
+    },
+    "rls": {
+      "status": "passed",
+      "artifact": "data\\release_evidence\\tier0_v1\\rls.json",
+      "test_count": 14,
+      "passed_count": 14,
+      "environment": "local Supabase Postgres"
+    },
+    "connected_audit": {
+      "status": "pending",
+      "reason": "Missing passed connected audit evidence: data\\release_evidence\\tier0_v1\\connected_supabase.json"
+    },
+    "offline_rehearsal": {
+      "status": "pending",
+      "reason": "Missing passed offline rehearsal evidence: data\\release_evidence\\tier0_v1\\offline_rehearsal\\rehearsal.json"
+    }
+  }
+}

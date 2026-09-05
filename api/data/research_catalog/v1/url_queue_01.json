@@ -1,0 +1,314 @@
+{
+  "queue_version": "v1",
+  "partition_id": "url-queue-01",
+  "selection_rule": "Eligible row iff Issue Group (casefold) contains one of: 'restraint of trade', 'restrictive covenant', 'breach of confidence', 'confidential information', or 'trade secret'. Aggregate by Judgment_URL; sort unique URLs by descending eligible row count then URL; select top 78 and defer the 79th.",
+  "eligible_unique_urls_before_cutoff": 79,
+  "priority_unique_urls": 78,
+  "eligible_rows": 747,
+  "range": [0, 26],
+  "deferred_url": "https://www.elitigation.sg/gd/s/2021_SGCA_97",
+  "runtime_use": "research_only_not_loaded_by_active_corpus",
+  "records": [
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2007_SGCA_53",
+      "citation": "[2007] SGCA 53",
+      "case_name": "Man Financial (S) Pte Ltd (formerly known as E D & F Man International (S) Pte Ltd) v Wong Bark Chuan David [2007] SGCA 53",
+      "court_type": "SGCA",
+      "year": 2007,
+      "eligible_row_count": 62,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 52},
+        {"name": "Confidential Information and Trade Secrets", "count": 5},
+        {"name": "Breach of Confidence", "count": 2},
+        {"name": "Employment Confidentiality and Restraint of Trade", "count": 1},
+        {"name": "Protection of Confidential Information and Trade Secrets", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2011_SGHC_241",
+      "citation": "[2011] SGHC 241",
+      "case_name": "Mano Vikrant Singh v Cargill TSF Asia Pte Ltd [2011] SGHC 241",
+      "court_type": "SGHC",
+      "year": 2011,
+      "eligible_row_count": 34,
+      "top_issue_groups": [{"name": "Restraint of Trade", "count": 34}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2013_SGHC_4",
+      "citation": "[2013] SGHC 4",
+      "case_name": "Centre for Creative Leadership (CCL) Pte Ltd v Byrne Roger Peter and others [2013] SGHC 4",
+      "court_type": "SGHC",
+      "year": 2013,
+      "eligible_row_count": 29,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 20},
+        {"name": "Restraint of Trade Covenants", "count": 8},
+        {"name": "Restrictive Covenants in Employment", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2007_SGHC_5",
+      "citation": "[2007] SGHC 5",
+      "case_name": "Wong Bark Chuan David v Man Financial (S) Pte Ltd [2007] SGHC 5",
+      "court_type": "SGHC",
+      "year": 2007,
+      "eligible_row_count": 28,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 18},
+        {"name": "Restrictive Covenants in Employment", "count": 10}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2014_SGHC_64",
+      "citation": "[2014] SGHC 64",
+      "case_name": "Lek Gwee Noi v Humming Flowers & Gifts Pte Ltd [2014] SGHC 64",
+      "court_type": "SGHC",
+      "year": 2014,
+      "eligible_row_count": 27,
+      "top_issue_groups": [
+        {"name": "Restrictive Covenants", "count": 10},
+        {"name": "Restrictive Covenants in Employment", "count": 7},
+        {"name": "Severance of Restrictive Covenants", "count": 5},
+        {"name": "Restraint of Trade", "count": 4},
+        {"name": "Restrictive Covenants in Employment Contracts", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2011_SGHC_266",
+      "citation": "[2011] SGHC 266",
+      "case_name": "Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart [2011] SGHC 266",
+      "court_type": "SGHC",
+      "year": 2011,
+      "eligible_row_count": 23,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 18},
+        {"name": "Restrictive Covenants", "count": 4},
+        {"name": "Restrictive Covenants in Employment Contracts", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2012_SGCA_42",
+      "citation": "[2012] SGCA 42",
+      "case_name": "Mano Vikrant Singh v Cargill TSF Asia Pte Ltd [2012] SGCA 42",
+      "court_type": "SGCA",
+      "year": 2012,
+      "eligible_row_count": 23,
+      "top_issue_groups": [{"name": "Restraint of Trade", "count": 23}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2014_SGHC_221",
+      "citation": "[2014] SGHC 221",
+      "case_name": "Clearlab SG Pte Ltd v Ting Chong Chai and others [2014] SGHC 221",
+      "court_type": "SGHC",
+      "year": 2014,
+      "eligible_row_count": 22,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 14},
+        {"name": "Restraint of Trade", "count": 3},
+        {"name": "Confidential Information", "count": 2},
+        {"name": "Confidential Information Ownership", "count": 1},
+        {"name": "Post-employment restrictive covenants", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2006_SGHC_107",
+      "citation": "[2006] SGHC 107",
+      "case_name": "Vestwin Trading Pte Ltd and Another v Obegi Melissa and Others [2006] SGHC 107",
+      "court_type": "SGHC",
+      "year": 2006,
+      "eligible_row_count": 20,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 19},
+        {"name": "Confidential Information", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGCA_16",
+      "citation": "[2024] SGCA 16",
+      "case_name": "Lim Suk Ling Priscilla and another v Amber Compounding Pharmacy Pte Ltd and another [2024] SGCA 16",
+      "court_type": "SGCA",
+      "year": 2024,
+      "eligible_row_count": 18,
+      "top_issue_groups": [{"name": "Breach of Confidence", "count": 18}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_286",
+      "citation": "[2024] SGHC 286",
+      "case_name": "Farm to Fork Sdn Bhd v Adamas Sg Pte Ltd and another [2024] SGHC 286",
+      "court_type": "SGHC",
+      "year": 2024,
+      "eligible_row_count": 18,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 17},
+        {"name": "Breach of confidence", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2025_SGHC_41",
+      "citation": "[2025] SGHC 41",
+      "case_name": "Hayate Partners Pte Ltd v Rajan Sunil Kumar [2025] SGHC 41",
+      "court_type": "SGHC",
+      "year": 2025,
+      "eligible_row_count": 18,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 17},
+        {"name": "Confidential Information", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2012_SGCA_39",
+      "citation": "[2012] SGCA 39",
+      "case_name": "Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart [2012] SGCA 39",
+      "court_type": "SGCA",
+      "year": 2012,
+      "eligible_row_count": 16,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 14},
+        {"name": "Restraint of Trade Doctrine", "count": 1},
+        {"name": "Restrictive Covenants", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2021_SGHC_256",
+      "citation": "[2021] SGHC 256",
+      "case_name": "Jethanand Harkishindas Bhojwani v Lakshmi Prataprai Bhojwani (alias Mrs Lakshmi Jethanand Bhojwani) and others [2021] SGHC 256",
+      "court_type": "SGHC",
+      "year": 2021,
+      "eligible_row_count": 16,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 14},
+        {"name": "Confidential Information", "count": 2}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2023_SGHC_317",
+      "citation": "[2023] SGHC 317",
+      "case_name": "Swift Maids Pte Ltd and another v Cheong Yi Qiang and others [2023] SGHC 317",
+      "court_type": "SGHC",
+      "year": 2023,
+      "eligible_row_count": 16,
+      "top_issue_groups": [{"name": "Breach of Confidence", "count": 16}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2012_SGHC_133",
+      "citation": "[2012] SGHC 133",
+      "case_name": "PH Hydraulics & Engineering Pte Ltd v Intrepid Offshore Construction Pte Ltd and another [2012] SGHC 133",
+      "court_type": "SGHC",
+      "year": 2012,
+      "eligible_row_count": 15,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 11},
+        {"name": "Confidential Information", "count": 3},
+        {"name": "Breach of Confidence", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_129",
+      "citation": "[2018] SGHC 129",
+      "case_name": "Adinop Co Ltd v Rovithai Ltd and another [2018] SGHC 129",
+      "court_type": "SGHC",
+      "year": 2018,
+      "eligible_row_count": 15,
+      "top_issue_groups": [
+        {"name": "Confidential Information", "count": 10},
+        {"name": "Breach of Confidence", "count": 4},
+        {"name": "Misuse of confidential information", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2023_SGHC_34",
+      "citation": "[2023] SGHC 34",
+      "case_name": "[2023] SGHC 34",
+      "court_type": "SGHC",
+      "year": 2023,
+      "eligible_row_count": 15,
+      "top_issue_groups": [{"name": "Breach of Confidence", "count": 15}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2020_SGCA_32",
+      "citation": "[2020] SGCA 32",
+      "case_name": "I-Admin (Singapore) Pte Ltd v Hong Ying Ting and others [2020] SGCA 32",
+      "court_type": "SGCA",
+      "year": 2020,
+      "eligible_row_count": 13,
+      "top_issue_groups": [{"name": "Breach of Confidence", "count": 13}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2000_SGCA_2",
+      "citation": "[2000] SGCA 2",
+      "case_name": "National Aerated Water Co Pte Ltd v Monarch Co, Inc [2000] SGCA 2",
+      "court_type": "SGCA",
+      "year": 2000,
+      "eligible_row_count": 12,
+      "top_issue_groups": [{"name": "Restraint of Trade", "count": 12}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2025_SGHC_13",
+      "citation": "[2025] SGHC 13",
+      "case_name": "ATT Systems (S'pore) Pte Ltd and another v Centricore (S) Pte Ltd and others [2025] SGHC 13",
+      "court_type": "SGHC",
+      "year": 2025,
+      "eligible_row_count": 12,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 11},
+        {"name": "Confidential Information Misuse", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2009_SGCA_54",
+      "citation": "[2009] SGCA 54",
+      "case_name": "Chua Chian Ya v Music & Movements (S) Pte Ltd (formerly trading as M & M Music Publishing)",
+      "court_type": "SGCA",
+      "year": 2009,
+      "eligible_row_count": 11,
+      "top_issue_groups": [{"name": "Restraint of Trade", "count": 11}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2005_SGCA_17",
+      "citation": "[2005] SGCA 17",
+      "case_name": "Stratech Systems Ltd v Nyam Chiu Shin (alias Yan Qiuxin) and Others [2005] SGCA 17",
+      "court_type": "SGCA",
+      "year": 2005,
+      "eligible_row_count": 10,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 7},
+        {"name": "Breach of Confidence", "count": 1},
+        {"name": "Confidential Information", "count": 1},
+        {"name": "Protection of Confidential Information", "count": 1}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2006_SGHC_183",
+      "citation": "[2006] SGHC 183",
+      "case_name": "QB Net Co Ltd v Earnson Management (S) Pte Ltd and Others [2006] SGHC 183",
+      "court_type": "SGHC",
+      "year": 2006,
+      "eligible_row_count": 10,
+      "top_issue_groups": [
+        {"name": "Breach of Confidence", "count": 7},
+        {"name": "Confidential Information", "count": 3}
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2009_SGHC_54",
+      "citation": "[2009] SGHC 54",
+      "case_name": "Ng Boon Ching v Claas Medical Centre Pte Ltd [2009] SGHC 54",
+      "court_type": "SGHC",
+      "year": 2009,
+      "eligible_row_count": 10,
+      "top_issue_groups": [{"name": "Restraint of Trade", "count": 10}]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2010_SGCA_3",
+      "citation": "[2010] SGCA 3",
+      "case_name": "CLAAS Medical Centre Pte Ltd (formerly known as Aesthetics Associates Pte Ltd) v Ng Boon Ching [2010] SGCA 3",
+      "court_type": "SGCA",
+      "year": 2010,
+      "eligible_row_count": 10,
+      "top_issue_groups": [
+        {"name": "Restraint of Trade", "count": 7},
+        {"name": "Liquidated Damages and Restraint of Trade", "count": 3}
+      ]
+    }
+  ]
+}

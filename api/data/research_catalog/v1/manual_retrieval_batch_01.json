@@ -1,0 +1,270 @@
+{
+  "batch_id": "manual-retrieval-2026-09-05-01",
+  "status": "awaiting_legal_review",
+  "generated_at": "2026-09-05T23:50:00+08:00",
+  "retrieval_method": "chrome_manual",
+  "source_host": "www.elitigation.sg",
+  "runtime_use": "research_only_not_loaded_by_active_corpus",
+  "manual_verification": {
+    "browser": "Google Chrome",
+    "page_check": "Each official URL rendered and the listed paragraph locator was found or queued for source-text review.",
+    "retrieved_at": "2026-09-05T23:50:00+08:00"
+  },
+  "raw_text_policy": "Raw judgment text and unreviewed extracts are intentionally not committed. Export exact passages and hashes only after a lawyer approves each Case Map.",
+  "source_dataset": {
+    "name": "SG-LegalCite COMBINED_ALL_CASES_FINAL_V2.csv",
+    "local_path_from_repo_root": "../SG-LegalCite/COMBINED_ALL_CASES_FINAL_V2.csv",
+    "source_url": "https://github.com/anonymousmeowmeow/SG-LegalCite",
+    "licence": "CC BY 4.0",
+    "selection_filter": "Singapore eLitigation rows matching restraint-of-trade, confidentiality, injunction, employment, or related legal-principle terms",
+    "matching_rows": 798,
+    "candidate_judgment_urls": 78,
+    "selected_rows": 225
+  },
+  "records": [
+    {
+      "citation": "[2000] SGCA 2",
+      "case_name": "National Aerated Water Co Pte Ltd v Monarch Co, Inc",
+      "court": "Court of Appeal",
+      "decision_date": "2000-01-12",
+      "official_url": "https://www.elitigation.sg/gd/s/2000_SGCA_2",
+      "page_variant": "gd/s",
+      "dataset_match_count": 12,
+      "topic_tags": ["restraint_of_trade", "legitimate_interest", "scope", "severance"],
+      "paragraph_targets": [
+        {"label": "[119]-[120]", "topic": "legitimate interest and reasonableness"},
+        {"label": "[131]-[145]", "topic": "severance / blue-pencil analysis"},
+        {"label": "[183]", "topic": "appeal outcome"}
+      ],
+      "outcome_status": "appeal_dismissed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2005] SGCA 17",
+      "case_name": "Stratech Systems Ltd v Nyam Chiu Shin (alias Yan Qiuxin) and others",
+      "court": "Court of Appeal",
+      "decision_date": "2005-03-28",
+      "official_url": "https://www.elitigation.sg/gd/s/2005_SGCA_17",
+      "page_variant": "gd/s",
+      "dataset_match_count": 10,
+      "topic_tags": ["confidential_information", "trade_secrets", "restraint_of_trade", "employee_knowledge"],
+      "paragraph_targets": [
+        {"label": "(5)", "topic": "trade secrets versus skill, experience, know-how and general knowledge", "locator_kind": "source_text_search"},
+        {"label": "[46]", "topic": "legitimate interest and no-wider-than-necessary restraint"},
+        {"label": "[22]", "topic": "appeal outcome"}
+      ],
+      "outcome_status": "appeal_dismissed_cross_appeal_allowed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2005] SGHC 150",
+      "case_name": "Tullett Prebon (Singapore) Ltd v Chua Leong Chuan Simon and Others",
+      "court": "High Court",
+      "decision_date": "2005-08-19",
+      "official_url": "https://www.elitigation.sg/gd/s/2005_SGHC_150",
+      "page_variant": "gd/s",
+      "dataset_match_count": 5,
+      "topic_tags": ["employment_injunction", "contractual_enforcement", "restraint_of_trade"],
+      "paragraph_targets": [
+        {"label": "[4]", "topic": "restraint of employee and employment injunction"},
+        {"label": "[9]", "topic": "term enforcement and legitimate interest"},
+        {"label": "[10]", "topic": "application outcome and period"}
+      ],
+      "outcome_status": "applications_allowed_limited_period",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2009] SGCA 54",
+      "case_name": "Chua Chian Ya v Music & Movements (S) Pte Ltd",
+      "court": "Court of Appeal",
+      "decision_date": "2009-11-06",
+      "official_url": "https://www.elitigation.sg/gd/s/2009_SGCA_54",
+      "page_variant": "gd/s",
+      "dataset_match_count": 19,
+      "topic_tags": ["restraint_of_trade", "freedom_of_contract", "contractual_interpretation"],
+      "paragraph_targets": [
+        {"label": "[14]", "topic": "property bargain and freedom of contract"},
+        {"label": "[17]", "topic": "prima facie unenforceability and reasonableness"},
+        {"label": "[36]", "topic": "appeal outcome"}
+      ],
+      "outcome_status": "appeal_allowed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2012] SGCA 42",
+      "case_name": "Mano Vikrant Singh v Cargill TSF Asia Pte Ltd",
+      "court": "Court of Appeal",
+      "decision_date": "2012-08-07",
+      "official_url": "https://www.elitigation.sg/gd/s/2012_SGCA_42",
+      "page_variant": "gd/s",
+      "dataset_match_count": 23,
+      "topic_tags": ["restraint_of_trade", "legitimate_interest", "reasonableness", "employee_choice_doctrine"],
+      "paragraph_targets": [
+        {"label": "[40]", "topic": "threshold and twin reasonableness tests"},
+        {"label": "[79]-[81]", "topic": "rejection of automatic employee-choice invalidity"},
+        {"label": "[82]", "topic": "appeal outcome"}
+      ],
+      "outcome_status": "appeal_allowed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2014] SGHC 64",
+      "case_name": "Lek Gwee Noi v Humming Flowers & Gifts Pte Ltd",
+      "court": "High Court",
+      "decision_date": "2014-04-08",
+      "official_url": "https://www.elitigation.sg/gd/s/2014_SGHC_64",
+      "page_variant": "gd/s",
+      "dataset_match_count": 38,
+      "topic_tags": ["restrictive_covenants", "legitimate_interest", "scope", "duration", "severance"],
+      "paragraph_targets": [
+        {"label": "[39]", "topic": "legitimate interest as threshold"},
+        {"label": "[98]", "topic": "activity scope"},
+        {"label": "[114]", "topic": "duration and trade connection"},
+        {"label": "[127]", "topic": "blue-pencil and divisibility"}
+      ],
+      "outcome_status": "entire_covenant_unenforceable_at_first_instance",
+      "review_note": "First-instance decision; later appeal exists and final treatment must be checked.",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2014] SGHC 221",
+      "case_name": "Clearlab SG Pte Ltd v Ting Chong Chai and others",
+      "court": "High Court",
+      "decision_date": "2014-11-03",
+      "official_url": "https://www.elitigation.sg/gd/s/2014_SGHC_221",
+      "page_variant": "gd/s",
+      "dataset_match_count": 48,
+      "topic_tags": ["breach_of_confidence", "confidential_information", "employment_duties", "restraint_of_trade"],
+      "paragraph_targets": [
+        {"label": "[125]", "topic": "necessary quality of confidence"},
+        {"label": "[196]-[199]", "topic": "taking of confidential information and breach analysis"}
+      ],
+      "outcome_status": "review_required_mixed_claims",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2018] SGHC 224",
+      "case_name": "Powerdrive Pte Ltd v Loh Kin Yong Philip and others",
+      "court": "High Court",
+      "decision_date": "2018-10-10",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2018_SGHC_224",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 7,
+      "topic_tags": ["restraint_of_trade", "confidentiality_clause", "legitimate_interest", "scope"],
+      "paragraph_targets": [
+        {"label": "[16]", "topic": "legitimate interest and reasonableness"},
+        {"label": "[20]", "topic": "separate confidentiality protection and restraint"},
+        {"label": "[7(a)]-[7(c)]", "topic": "scope and strike-out outcome"}
+      ],
+      "outcome_status": "restraint_provision_not_enforceable_strike_out_granted",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2019] SGHC 127",
+      "case_name": "I-Admin (Singapore) Pte Ltd v Hong Ying Ting and others and another suit",
+      "court": "High Court",
+      "decision_date": "2019-05-14",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2019_SGHC_127",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 11,
+      "topic_tags": ["breach_of_confidence", "confidential_information", "unauthorised_access"],
+      "paragraph_targets": [
+        {"label": "[66]", "topic": "necessary quality of confidentiality"},
+        {"label": "[61]", "topic": "unauthorised use and detriment analysis"}
+      ],
+      "outcome_status": "review_required",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2021] SGHC 109",
+      "case_name": "Prudential Assurance Co Singapore (Pte) Ltd v Tan Shou Yi Peter and another",
+      "court": "General Division of the High Court",
+      "decision_date": "2021-05-05",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2021_SGHC_109",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 26,
+      "topic_tags": ["restraint_of_trade", "non_solicitation", "public_scope", "fiduciary_duties"],
+      "paragraph_targets": [
+        {"label": "[137]-[138]", "topic": "public scope and non-solicitation"}
+      ],
+      "outcome_status": "review_required_mixed_claims",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2022] SGHC 128",
+      "case_name": "Asia Petworld Pte Ltd v Sivabalan s/o Ramasami and another",
+      "court": "General Division of the High Court",
+      "decision_date": "2022-05-26",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2022_SGHC_128",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 11,
+      "topic_tags": ["breach_of_confidence", "confidential_information", "unauthorised_acquisition", "interim_injunction"],
+      "paragraph_targets": [
+        {"label": "[37]", "topic": "burden shift after unauthorised acquisition"},
+        {"label": "[67]", "topic": "temporal relevance and employee knowledge"},
+        {"label": "[82]-[83]", "topic": "injunction and claim outcome"}
+      ],
+      "outcome_status": "injunction_discharged_claim_dismissed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2022] SGHC 167",
+      "case_name": "3D Networks Singapore Pte Ltd v Voon South Shiong and another",
+      "court": "General Division of the High Court",
+      "decision_date": "2022-07-18",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2022_SGHC_167",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 14,
+      "topic_tags": ["restraint_of_trade", "severance", "breach_of_confidence", "economic_torts"],
+      "paragraph_targets": [
+        {"label": "[44]", "topic": "severance prerequisites"},
+        {"label": "[150]", "topic": "breach of confidence elements"},
+        {"label": "[199]-[201]", "topic": "disclosures, remedies and account of profits"}
+      ],
+      "outcome_status": "review_required_mixed_claims",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2007] SGHC 192",
+      "case_name": "SeaCAD Technologies Pte Ltd v Tan Siew Meng Aaron and Another",
+      "court": "High Court",
+      "decision_date": "2007-11-09",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2007_SGHC_192",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 1,
+      "topic_tags": ["restraint_of_trade", "contractual_interpretation", "confidential_information"],
+      "paragraph_targets": [
+        {"label": "[30]", "topic": "common understanding and interpretation"},
+        {"label": "[39]", "topic": "evidence and claim outcome"}
+      ],
+      "outcome_status": "claims_dismissed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    }
+  ]
+}

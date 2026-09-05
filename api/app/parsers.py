@@ -15,6 +15,7 @@ CITATION_PATTERN = re.compile(
 PINPOINT_PATTERN = re.compile(r"(?:at\s*)?\[(?P<pin>\d+(?:[-–]\d+)?)\]", re.IGNORECASE)
 MALFORMED_CITATION_PATTERN = re.compile(r"\[?\d{4}\]?\s+SG(?:CA|HC|HC\(A\)|SICC)\b", re.IGNORECASE)
 CASE_NAME_PATTERN = re.compile(r"(?P<name>[A-Z][A-Za-z0-9&().,' -]{2,80}\sv\s[A-Z][A-Za-z0-9&().,' -]{2,80})")
+DIRECT_QUOTE_PATTERN = re.compile(r'["“](?P<quote>[^"”\n]{1,800})["”]')
 
 
 def modality_for(text: str) -> str:
@@ -40,6 +41,12 @@ def canonical_citation(value: str) -> str | None:
     if not match:
         return None
     return f"[{match.group('year')}] {match.group('court').upper()} {match.group('number')}"
+
+
+def direct_quote_for(text: str) -> str | None:
+    """Return one bounded direct quote; Tier 0 intentionally does no fuzzy matching."""
+    match = DIRECT_QUOTE_PATTERN.search(text)
+    return match.group("quote").strip() if match else None
 
 
 class ClaimParser(Protocol):
@@ -85,6 +92,7 @@ class LocalClaimParser:
                     case_name_mention=name_match.group("name").strip() if name_match else None,
                     citation_parse_status="valid" if citation else "malformed" if malformed else "unresolved",
                     modality=modality_for(sentence),
+                    quoted_text=direct_quote_for(sentence),
                 )
             )
         return claims
@@ -126,6 +134,7 @@ class GeminiClaimParser:
             payload = item.model_dump()
             payload["citation"] = canonical_citation(item.citation) if item.citation else None
             payload["citation_parse_status"] = "valid" if payload["citation"] else "unresolved"
+            payload["quoted_text"] = direct_quote_for(payload["text"])
             claims.append(
                 ParsedClaim(
                     **payload,

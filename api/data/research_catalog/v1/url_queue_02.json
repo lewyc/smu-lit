@@ -1,0 +1,452 @@
+{
+  "queue_version": "v1",
+  "partition_id": "url-queue-02-of-03",
+  "generated_at": "2026-09-06T00:00:00+08:00",
+  "selection_rule": {
+    "eligible_row_condition": "Issue Group (casefold) contains one of: 'restraint of trade', 'restrictive covenant', 'breach of confidence', 'confidential information', or 'trade secret'",
+    "aggregation_key": "Judgment_URL",
+    "ordering": "eligible row count descending, then official URL ascending",
+    "source_dataset": "SG-LegalCite COMBINED_ALL_CASES_FINAL_V2.csv",
+    "source_encoding": "latin-1"
+  },
+  "eligible_rows_before_cutoff": 747,
+  "eligible_unique_urls_before_cutoff": 79,
+  "priority_unique_urls": 78,
+  "range": [
+    26,
+    52
+  ],
+  "deferred_url": "https://www.elitigation.sg/gd/s/2021_SGCA_97",
+  "runtime_use": "research_only_not_loaded_by_active_corpus",
+  "raw_text_policy": "Metadata only. No judgment text, passages, or paragraph excerpts are stored in this queue.",
+  "records": [
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2023_SGHC_114",
+      "citation": "[2023] SGHC 114",
+      "case_name": "Full House Building Construction Pte Ltd v Tan Hong Joo and others [2023] SGHC 114",
+      "court_type": "SGHC",
+      "year": "2023",
+      "eligible_row_count": 10,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2009_SGHC_259",
+      "citation": "[2009] SGHC 259",
+      "case_name": "Hengxin Technology Ltd v Jiang Wei and Another Suit [2009] SGHC 259",
+      "court_type": "SGHC",
+      "year": "2009",
+      "eligible_row_count": 9,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 6
+        },
+        {
+          "name": "Restrictive Covenants",
+          "count": 2
+        },
+        {
+          "name": "Restrictive Covenants in Employment",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2014_SGHC_258",
+      "citation": "[2014] SGHC 258",
+      "case_name": "Total English Learning Global Pte Ltd and another v Kids Counsel Pte Ltd and another suit [2014] SGHC 258",
+      "court_type": "SGHC",
+      "year": "2014",
+      "eligible_row_count": 9,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 5
+        },
+        {
+          "name": "Breach of Restrictive Covenants",
+          "count": 2
+        },
+        {
+          "name": "Confidential Information",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2021_SGHC_109",
+      "citation": "[2021] SGHC 109",
+      "case_name": "Prudential Assurance Co Singapore (Pte) Ltd v Tan Shou Yi Peter and another [2021] SGHC 109",
+      "court_type": "SGHC",
+      "year": "2021",
+      "eligible_row_count": 9,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2012_SGHC_236",
+      "citation": "[2012] SGHC 236",
+      "case_name": "Pilkadaris Terry and others v Asian Tour (Tournament Players Division) Pte Ltd and another and another suit [2012] SGHC 236",
+      "court_type": "SGHC",
+      "year": "2012",
+      "eligible_row_count": 8,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2022_SGHC_128",
+      "citation": "[2022] SGHC 128",
+      "case_name": "Asia Petworld Pte Ltd v Sivabalan s/o Ramasami and another [2022] SGHC 128",
+      "court_type": "SGHC",
+      "year": "2022",
+      "eligible_row_count": 8,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 6
+        },
+        {
+          "name": "Confidential Information and Trade Secrets",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2022_SGHC_23",
+      "citation": "[2022] SGHC 23",
+      "case_name": "Uday Mehra v L Capital Asia Advisors and others [2022] SGHC 23",
+      "court_type": "SGHC",
+      "year": "2022",
+      "eligible_row_count": 8,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGCA_39",
+      "citation": "[2024] SGCA 39",
+      "case_name": "Syed Suhail bin Syed Zin and others v Attorney-General [2024] SGCA 39",
+      "court_type": "SGCA",
+      "year": "2024",
+      "eligible_row_count": 8,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2001_SGHC_77",
+      "citation": "[2001] SGHC 77",
+      "case_name": "Stratech Systems Limited v Guthrie Properties (S) Pte Ltd and Another [2001] SGHC 77",
+      "court_type": "SGHC",
+      "year": "2001",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2015_SGHC_100",
+      "citation": "[2015] SGHC 100",
+      "case_name": "Tempcool Engineering (S) Pte Ltd v Chong Vincent and others [2015] SGHC 100",
+      "court_type": "SGHC",
+      "year": "2015",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        },
+        {
+          "name": "Breach of Confidence and Employment Duties",
+          "count": 1
+        },
+        {
+          "name": "Breach of Confidence and Fiduciary Duties",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_224",
+      "citation": "[2018] SGHC 224",
+      "case_name": "Powerdrive Pte Ltd v Loh Kin Yong Philip and others [2018] SGHC 224",
+      "court_type": "SGHC",
+      "year": "2018",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 6
+        },
+        {
+          "name": "Restraint of Trade Clause Enforcement",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_85",
+      "citation": "[2018] SGHC 85",
+      "case_name": "Tan Kok Yong Steve v Itochu Singapore Pte Ltd [2018] SGHC 85",
+      "court_type": "SGHC",
+      "year": "2018",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2019_SGCA_67",
+      "citation": "[2019] SGCA 67",
+      "case_name": "Adinop Co Ltd v Rovithai Lt d and another [2019] SGCA 67",
+      "court_type": "SGCA",
+      "year": "2019",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 6
+        },
+        {
+          "name": "Misuse of Confidential Information",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_29",
+      "citation": "[2024] SGHC 29",
+      "case_name": "Shopee Singapore Pte Ltd v Lim Teck Yong [2024] SGHC 29",
+      "court_type": "SGHC",
+      "year": "2024",
+      "eligible_row_count": 7,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_166",
+      "citation": "[2018] SGHC 166",
+      "case_name": "Leiman, Ricardo and another v Noble Resources Ltd and another [2018] SGHC 166",
+      "court_type": "SGHC",
+      "year": "2018",
+      "eligible_row_count": 6,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2022_SGHC_167",
+      "citation": "[2022] SGHC 167",
+      "case_name": "3D Networks Singapore Pte Ltd v Voon South Shiong and another [2022] SGHC 167",
+      "court_type": "SGHC",
+      "year": "2022",
+      "eligible_row_count": 6,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 5
+        },
+        {
+          "name": "Breach of Confidence",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2023_SGHC_241",
+      "citation": "[2023] SGHC 241",
+      "case_name": "Amber Compounding Pharmacy Pte Ltd and another v Lim Suk Ling Priscilla and others [2023] SGHC 241",
+      "court_type": "SGHC",
+      "year": "2023",
+      "eligible_row_count": 6,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        },
+        {
+          "name": "Remedies for breach of confidence",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2024_SGHC_94",
+      "citation": "[2024] SGHC 94",
+      "case_name": "MoneySmart Singapore Pte Ltd v Artem Musienko [2024] SGHC 94",
+      "court_type": "SGHC",
+      "year": "2024",
+      "eligible_row_count": 6,
+      "top_issue_groups": [
+        {
+          "name": "Restraint of Trade",
+          "count": 5
+        },
+        {
+          "name": "Confidential Information",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2003_SGHC_187",
+      "citation": "[2003] SGHC 187",
+      "case_name": "Asia Business Forum Pte Ltd v Long Ai Sin and Another [2003] SGHC 187",
+      "court_type": "SGHC",
+      "year": "2003",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Trade Secrets and Confidential Information",
+          "count": 3
+        },
+        {
+          "name": "Breach of Confidence",
+          "count": 1
+        },
+        {
+          "name": "Confidential Information and Trade Secrets",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2008_SGHC_29",
+      "citation": "[2008] SGHC 29",
+      "case_name": "SMC Marine Services (Pte) Ltd v Thangavelu Boopathiraja and Others [2008] SGHC 29",
+      "court_type": "SGHC",
+      "year": "2008",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Confidential Information and Trade Secrets",
+          "count": 4
+        },
+        {
+          "name": "Breach of Confidence",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2015_SGCA_43",
+      "citation": "[2015] SGCA 43",
+      "case_name": "ANB v ANC and another and another matter [2015] SGCA 43",
+      "court_type": "SGCA",
+      "year": "2015",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2017_SGCA_23",
+      "citation": "[2017] SGCA 23",
+      "case_name": "Wee Shuo Woon v HT\u00c2 S .R.L. [2017] SGCA 23",
+      "court_type": "SGCA",
+      "year": "2017",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 3
+        },
+        {
+          "name": "Confidential Information",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_127",
+      "citation": "[2018] SGHC 127",
+      "case_name": "International Financial Services (S) Pte Ltd and another v Old Mutual International Isle of Man Ltd Singapore Branch and another [2018] SGHC 127",
+      "court_type": "SGHC",
+      "year": "2018",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2018_SGHC_167",
+      "citation": "[2018] SGHC 167",
+      "case_name": "Nanofilm Technologies International Pte Ltd v Semivac International Pte Ltd and others [2018] SGHC 167",
+      "court_type": "SGHC",
+      "year": "2018",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2022_SGHC_205",
+      "citation": "[2022] SGHC 205",
+      "case_name": "Writers Studio Pte Ltd v Chin Kwok Yung [2022] SGHC 205",
+      "court_type": "SGHC",
+      "year": "2022",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "official_url": "https://www.elitigation.sg/gd/s/2023_SGHC_23",
+      "citation": "[2023] SGHC 23",
+      "case_name": "Tritech Water Technologies Pte Ltd and others v Duan Wei and another [2023] SGHC 23",
+      "court_type": "SGHC",
+      "year": "2023",
+      "eligible_row_count": 5,
+      "top_issue_groups": [
+        {
+          "name": "Breach of Confidence",
+          "count": 5
+        }
+      ]
+    }
+  ]
+}

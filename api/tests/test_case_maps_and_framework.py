@@ -139,7 +139,7 @@ def test_court_code_and_case_name_identity_mismatches_are_detected() -> None:
     assert (wrong_name.verdict, wrong_name.decision_rule_id) == ("unsupported", "PM-CIT-005")
 
 
-def test_full_mode_requires_question_and_adds_omission_review_prompts() -> None:
+def test_full_mode_is_rejected_and_never_generates_omission_prompts() -> None:
     assert client.post("/api/v1/audits", json={"answer": "A legal answer.", "audit_mode": "full"}).status_code == 422
     response = client.post(
         "/api/v1/audits",
@@ -151,10 +151,8 @@ def test_full_mode_requires_question_and_adds_omission_review_prompts() -> None:
             "parser_mode": "local",
         },
     )
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["context_profile"]["duration"] == "one-year" or payload["context_profile"]["duration"] is None
-    assert any(item["code"] == "potential_omission" for item in payload["flags"])
+    assert response.status_code == 422
+    assert "deferred beyond the Tier 0 release" in response.json()["detail"][0]["msg"]
 
 
 def test_feedback_marks_review_without_changing_verdict() -> None:

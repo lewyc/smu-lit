@@ -18,11 +18,14 @@ export interface Passage {
   supported_propositions: string[]
   limitations: string[]
   source_provenance?: 'officially_sourced' | 'user_supplied' | 'gold_fixture' | 'rejected'
-  assessment_status?: 'ai_supported' | 'gold_fixture' | 'unannotated' | 'rejected'
+  assessment_status?: 'ai_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
   annotation_confidence?: number | null
   annotation_model?: string | null
   outcome_direction?: 'supports_enforcement' | 'limits_enforcement' | 'mixed' | 'unknown'
   annotation_disagrees?: boolean
+  source_role?: 'unreviewed' | 'judicial_holding' | 'party_submission' | 'dissent' | 'obiter' | 'procedural_history'
+  source_role_reviewed?: boolean
+  source_role_reviewer?: string | null
 }
 
 export interface Authority {
@@ -35,7 +38,7 @@ export interface Authority {
   official_url: string
   source_status: string
   source_provenance?: 'officially_sourced' | 'user_supplied' | 'gold_fixture' | 'rejected'
-  assessment_status?: 'ai_supported' | 'gold_fixture' | 'unannotated' | 'rejected'
+  assessment_status?: 'ai_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
   source_host?: string | null
   discovery_query?: string | null
   retrieved_at?: string | null
@@ -48,6 +51,9 @@ export interface Authority {
   precedential_status?: 'binding' | 'persuasive' | 'secondary' | 'unknown'
   hierarchy_reviewed?: boolean
   source_hierarchy_tier?: number | null
+  source_review_status?: 'pending' | 'approved'
+  source_reviewer?: string | null
+  source_reviewed_at?: string | null
   passages: Passage[]
 }
 
@@ -83,6 +89,9 @@ export interface AuditedClaim {
   decision_rule_id?: string
   severity?: 'critical' | 'serious' | 'review' | 'informational'
   pinpoint_status?: 'not_supplied' | 'matched' | 'missing' | 'wrong_proposition'
+  quote_status?: 'not_present' | 'matched' | 'mismatch' | 'unresolved'
+  citation_identity_status?: 'not_assessed' | 'matched' | 'malformed' | 'unresolved' | 'court_code_mismatch' | 'case_name_mismatch'
+  source_role_status?: 'unreviewed' | 'judicial_holding' | 'party_submission' | 'dissent' | 'obiter' | 'procedural_history'
   currency_status?: 'current_reviewed' | 'negative_treatment' | 'not_verified'
   assessment_confidence?: 'high' | 'medium' | 'low'
   case_map_version?: string | null
@@ -250,6 +259,12 @@ export interface BenchmarkResult {
   fabrication_precision: number
   fabrication_false_positive_count: number
   confusion_matrix: Record<string, Record<string, number>>
+  citation_identity_precision: number
+  citation_identity_recall: number
+  pinpoint_precision: number
+  pinpoint_recall: number
+  quote_accuracy: number
+  gate_confusion_matrix: Record<string, Record<string, Record<string, number>>>
 }
 
 export interface CoverageCell {

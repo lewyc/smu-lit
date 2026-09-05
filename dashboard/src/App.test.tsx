@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, vi } from 'vitest'
 import App from './App'
@@ -36,17 +36,15 @@ describe('ProofMark dashboard', () => {
     expect(screen.getByRole('button', { name: /Load demonstration answer/i })).toBeInTheDocument()
   })
 
-  it('reveals contextual inputs only when full mode is selected', async () => {
+  it('keeps the new-audit form citation-only during the Tier 0 release', async () => {
     render(
       <MemoryRouter initialEntries={['/audits/new']}>
         <App />
       </MemoryRouter>,
     )
-    const auditDepth = await screen.findByLabelText(/Audit depth/i)
     expect(screen.queryByPlaceholderText(/What question was the AI asked/i)).not.toBeInTheDocument()
-    fireEvent.change(auditDepth, { target: { value: 'full' } })
-    expect(screen.getByPlaceholderText(/What question was the AI asked/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Duration, territory/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Audit depth/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/does not assess factual fit, legal significance or omissions/i)).toBeInTheDocument()
   })
 
   it('exposes the Case Map human-review workbench', async () => {
@@ -64,12 +62,10 @@ describe('ProofMark dashboard', () => {
     expect(await screen.findByText(/0 maps/i)).toBeInTheDocument()
   })
 
-  it('shows the assessed input and links prompts to their claim or context source', async () => {
+  it('shows Tier 0 prompts and hides deferred completeness prompts', async () => {
     vi.spyOn(auditRepository, 'getAudit').mockResolvedValue({
       ...savedDemoResult,
-      audit_mode: 'full',
-      original_question: 'Can the employer enforce this worldwide restraint?',
-      facts: 'The employee was a senior salesperson with customer access.',
+      audit_mode: 'citation_only',
       flags: [
         {
           code: 'wrong_pinpoint',
@@ -77,14 +73,6 @@ describe('ProofMark dashboard', () => {
           severity: 'serious',
           message: 'The supplied pinpoint is missing or does not support the mapped proposition.',
           claim_order: 1,
-          lawyer_review_required: true,
-        },
-        {
-          code: 'potential_omission',
-          module: 'balance_completeness',
-          severity: 'review',
-          message: 'The issue checklist expects consideration of public interest.',
-          claim_order: null,
           lawyer_review_required: true,
         },
       ],
@@ -99,6 +87,6 @@ describe('ProofMark dashboard', () => {
     expect(await screen.findByText(/Material assessed in this audit/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/AI answer submitted for evaluation/i)).toHaveTextContent(DEMO_ANSWER.split('\n')[0])
     expect(screen.getByRole('link', { name: /Refers to claim 01/i })).toHaveAttribute('href', '#claim-1')
-    expect(screen.getByRole('link', { name: /Derived from the submitted question/i })).toHaveAttribute('href', '#submitted-input')
+    expect(screen.queryByText(/issue checklist expects consideration/i)).not.toBeInTheDocument()
   })
 })

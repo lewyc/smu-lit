@@ -329,9 +329,9 @@ def re_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]) -> 
         )
     submission = AuditSubmission(
         answer=prior.input_text,
-        audit_mode=prior.audit_mode,
-        original_question=prior.original_question,
-        facts=prior.facts,
+        # Historical full audits remain readable, but a re-audit is a new Tier 0
+        # citation-only result rather than an implicit Tier 1/2 evaluation.
+        audit_mode="citation_only",
         parser_mode=prior.parser_requested,
         persist=settings.data_mode == "supabase",
         reuse_cache=False,
@@ -339,6 +339,8 @@ def re_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]) -> 
     currency_statuses, currency_registry_version = _currency_context(token)
     audit = engine.audit(submission, currency_statuses, currency_registry_version)
     audit.re_audited_from_public_id = public_id
+    if prior.audit_mode == "full":
+        audit.evaluation_provenance["legacy_context_not_reapplied"] = True
     return repository.save(audit)
 
 

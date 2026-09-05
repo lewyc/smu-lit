@@ -8,10 +8,11 @@ const current = [
   'Synchronous local FastAPI engine',
   'Immutable official-judgment snapshot with cached fallback',
   'Exact neutral-citation resolution',
-  'Exact-pincite and citation-identity checks',
+  'Exact-pincite, citation-identity, and direct-quote checks',
+  'Reviewed source-role and approved treatment review flags',
   'Gemini Case Map drafts with exact paragraph anchors',
   'Lawyer editing, approval and immutable review history',
-  'Full-mode context, modality, omission and balance checks',
+  'Deterministic modality checks and lawyer handoff',
   'Controlled practitioner feedback without self-training',
   'Supabase Auth, RLS, and durable audit records',
   'Source-versioned cache, stale-report warning, and linked re-audit',
@@ -72,6 +73,9 @@ export function AssurancePage() {
       </div>
       <div className="corpus-notice">
         <strong>Research candidates are not verdict evidence.</strong> A future offline catalogue may use the independent CC BY 4.0 SG-LegalCite benchmark to nominate potentially relevant authorities. Its citing-judgment context and LLM-extracted principle are discovery metadata only; official paragraphs, reviewed Case Maps, and treatment review remain required before any legal support is presented.
+      </div>
+      <div className="corpus-notice">
+        <strong>Tier 0 scope.</strong> The current audit checks citation identity, pinpoints, direct quotations, reviewer-labelled source roles, approved treatment records and language modality. Factual fit, legal significance, entailment and missing-authority analysis are deferred.
       </div>
       <div className="panel boundary-panel">
         <p className="eyebrow">Who audits the auditor?</p>

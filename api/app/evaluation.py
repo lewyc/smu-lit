@@ -4,12 +4,6 @@ import re
 
 from app.models import AuditedClaim, ContextProfile, EvaluationFlag, ModuleScore
 
-ISSUE_CHECKLIST = {
-    "legitimate_proprietary_interest",
-    "reasonableness_between_parties",
-    "reasonableness_public_interest",
-}
-
 COURT_HIERARCHY = [
     {"court_code": "SGCA", "tier": 5, "label": "Singapore Court of Appeal", "default_status": "binding"},
     {"court_code": "SGHC(A)", "tier": 4, "label": "Appellate Division of the High Court", "default_status": "persuasive"},
@@ -85,6 +79,31 @@ def evaluate_framework(
                     claim_order=claim.order,
                 )
             )
+        if claim.quote_status == "mismatch":
+            flags.append(
+                EvaluationFlag(
+                    code="quote_mismatch",
+                    module="citation_integrity",
+                    severity="serious",
+                    message="The supplied direct quote does not match the cited, pinpointed retained paragraph.",
+                    claim_order=claim.order,
+                )
+            )
+        role_flag = {
+            "party_submission": "party_submission_as_holding",
+            "dissent": "dissent_as_holding",
+            "obiter": "obiter_as_binding",
+        }.get(claim.source_role_status)
+        if role_flag:
+            flags.append(
+                EvaluationFlag(
+                    code=role_flag,
+                    module="citation_integrity",
+                    severity="review",
+                    message="Reviewer-labelled source role requires lawyer review before the passage is presented as a judicial holding.",
+                    claim_order=claim.order,
+                )
+            )
         if claim.modality == "mandatory" and claim.overgeneralisation_terms:
             flags.append(
                 EvaluationFlag(
@@ -108,11 +127,17 @@ def evaluate_framework(
 
     citation_score = _percentage(
         len(
-            [c for c in in_scope if c.citation and c.verdict not in {"unverified", "likely_fabricated"} and c.pinpoint_status != "missing"]
+            [
+                c
+                for c in in_scope
+                if c.citation
+                and c.citation_identity_status == "matched"
+                and c.pinpoint_status not in {"missing", "wrong_proposition"}
+                and c.quote_status != "mismatch"
+            ]
         ),
         len([c for c in in_scope if c.citation]),
     )
-    proposition_score = _percentage(len([c for c in in_scope if any(e.relation == "supports" for e in c.evidence)]), len(in_scope))
     currency_known = [c for c in in_scope if c.currency_status != "not_verified"]
     currency_score = (
         _percentage(len([c for c in currency_known if c.currency_status == "current_reviewed"]), len(currency_known))
@@ -120,59 +145,21 @@ def evaluate_framework(
         else 0
     )
 
-    if mode == "full":
-        present = {claim.proposition for claim in in_scope}
-        expected = set(ISSUE_CHECKLIST)
-        source_text = " ".join(claim.text.lower() for claim in claims)
-        if "confidential" in source_text or (profile and profile.confidential_information_access):
-            expected.add("confidential_information")
-        if "customer" in source_text or (profile and profile.customer_connection):
-            expected.add("customer_connections")
-        if "injunction" in source_text or (profile and profile.relief_sought == "injunction"):
-            expected.add("interim_injunction_standard")
-        if "sever" in source_text or "blue pencil" in source_text:
-            expected.add("severance_blue_pencil")
-        missing = sorted(expected - present)
-        for proposition in missing:
-            flags.append(
-                EvaluationFlag(
-                    code="potential_omission",
-                    module="balance_completeness",
-                    severity="review",
-                    message=f"The issue checklist expects consideration of {proposition.replace('_', ' ')}.",
-                )
-            )
-        if not {"reasonableness_between_parties", "reasonableness_public_interest"}.issubset(present):
-            flags.append(
-                EvaluationFlag(
-                    code="potentially_one_sided",
-                    module="balance_completeness",
-                    severity="review",
-                    message="The answer may not address both private reasonableness and public-interest considerations.",
-                )
-            )
-        if "policy_freedom_to_trade" not in present:
-            flags.append(
-                EvaluationFlag(
-                    code="policy_factor_not_addressed",
-                    module="balance_completeness",
-                    severity="review",
-                    message="Freedom-of-trade and bargaining-power policy considerations were not identified.",
-                )
-            )
-        balance_score = _percentage(len(expected & present), len(expected))
-        balance = ModuleScore(score=balance_score, weight=15, assessed=True)
-    else:
-        balance = ModuleScore(
-            score=None,
-            weight=15,
-            assessed=False,
-            reason_not_assessed="Balance and omissions require the original question and facts in full mode.",
-        )
+    balance = ModuleScore(
+        score=None,
+        weight=0,
+        assessed=False,
+        reason_not_assessed="Completeness and contextual analysis are deferred beyond Tier 0.",
+    )
 
     modules = {
-        "citation": ModuleScore(score=citation_score, weight=30, assessed=True),
-        "proposition": ModuleScore(score=proposition_score, weight=35, assessed=True),
+        "citation": ModuleScore(score=citation_score, weight=100, assessed=True),
+        "proposition": ModuleScore(
+            score=None,
+            weight=0,
+            assessed=False,
+            reason_not_assessed="Proposition entailment is deferred beyond Tier 0.",
+        ),
         "currency": ModuleScore(
             score=currency_score if currency_known else None,
             weight=20,
@@ -185,9 +172,7 @@ def evaluate_framework(
 
 
 def overall_score(modules: dict[str, ModuleScore], mode: str) -> float | None:
-    if mode != "full" or not all(item.assessed for item in modules.values()):
-        return None
-    return round(sum((item.score or 0) * item.weight for item in modules.values()) / 100, 1)
+    return None
 
 
 def _percentage(numerator: int, denominator: int) -> float:

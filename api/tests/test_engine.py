@@ -67,6 +67,11 @@ def test_local_parser_extracts_multiple_claims_and_pinpoints() -> None:
     assert claims[1].overgeneralisation_terms == ["automatically", "all non-competes"]
 
 
+def test_local_parser_extracts_only_bounded_double_quoted_text() -> None:
+    claim = LocalClaimParser().parse('The court said "A legitimate interest is required" [2007] SGCA 53 at [79].')[0]
+    assert claim.quoted_text == "A legitimate interest is required"
+
+
 def test_all_gold_authorities_resolve_exactly() -> None:
     corpus = GoldFixtureCorpusRepository()
     assert all(corpus.resolve(authority.citation_key) for authority in AUTHORITIES)
@@ -106,6 +111,17 @@ def test_unknown_citation_is_not_called_fabricated_without_negative_check() -> N
     assert audit.claims[0].verdict == "unverified"
 
 
+def test_direct_quote_mismatch_is_an_unsupported_deterministic_gate() -> None:
+    audit = gold_engine().audit(
+        AuditSubmission(
+            answer='"Invented words" [2007] SGCA 53 at [79] establish a legitimate proprietary interest.',
+            parser_mode="local",
+        )
+    )
+    claim = audit.claims[0]
+    assert (claim.verdict, claim.quote_status, claim.decision_rule_id) == ("unsupported", "mismatch", "PM-QUO-001")
+
+
 def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> None:
     audit = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), GoldFixtureCorpusRepository()).audit(
         AuditSubmission(
@@ -118,18 +134,12 @@ def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> N
     assert audit.claims[0].verdict == "verified"
 
 
-def test_cache_key_includes_context_and_active_corpus_version(tmp_path: Path) -> None:
+def test_cache_key_includes_active_corpus_version(tmp_path: Path) -> None:
     submission = AuditSubmission(
         answer="A legitimate interest is required [2007] SGCA 53.",
         parser_mode="local",
-        audit_mode="full",
-        original_question="Is the restraint enforceable?",
-        facts="A senior employee had customer access.",
     )
     gold = gold_engine()
-    changed_facts = submission.model_copy(update={"facts": "A junior employee had no customer access."})
-    assert gold.request_cache_key(submission) != gold.request_cache_key(changed_facts)
-
     automatic = automated_engine(tmp_path / "snapshot.json")
     assert gold.request_cache_key(submission) != automatic.request_cache_key(submission)
 
@@ -175,6 +185,7 @@ def test_approved_currency_context_is_traceable_and_invalidates_cache() -> None:
         "currency-reviewed-2",
     )
     assert limited.claims[0].currency_status == "negative_treatment"
+    assert limited.claims[0].verdict == "context_review"
     assert any(flag.code == "negative_treatment" for flag in limited.flags)
 
 

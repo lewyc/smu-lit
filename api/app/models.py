@@ -20,7 +20,15 @@ AuditVerdict = Literal[
 ]
 EvidenceRelation = Literal["supports", "limits", "contradicts", "unresolved"]
 SourceProvenance = Literal["officially_sourced", "user_supplied", "gold_fixture", "rejected"]
-AssessmentStatus = Literal["ai_supported", "gold_fixture", "unannotated", "rejected"]
+AssessmentStatus = Literal["ai_supported", "human_reviewed", "gold_fixture", "unannotated", "rejected"]
+PassageSourceRole = Literal[
+    "unreviewed",
+    "judicial_holding",
+    "party_submission",
+    "dissent",
+    "obiter",
+    "procedural_history",
+]
 OutcomeDirection = Literal[
     "supports_enforcement",
     "limits_enforcement",
@@ -57,6 +65,9 @@ class Passage(BaseModel):
     annotation_model: str | None = None
     outcome_direction: OutcomeDirection = "unknown"
     annotation_disagrees: bool = False
+    source_role: PassageSourceRole = "unreviewed"
+    source_role_reviewed: bool = False
+    source_role_reviewer: str | None = None
 
 
 class Authority(BaseModel):
@@ -82,6 +93,9 @@ class Authority(BaseModel):
     precedential_status: Literal["binding", "persuasive", "secondary", "unknown"] = "unknown"
     hierarchy_reviewed: bool = False
     source_hierarchy_tier: int | None = None
+    source_review_status: Literal["pending", "approved"] = "pending"
+    source_reviewer: str | None = None
+    source_reviewed_at: datetime | None = None
     passages: list[Passage]
 
     @model_validator(mode="after")
@@ -151,6 +165,7 @@ class ParsedClaim(BaseModel):
     case_name_mention: str | None = None
     citation_parse_status: Literal["valid", "malformed", "unresolved"] = "unresolved"
     modality: Modality = "descriptive"
+    quoted_text: str | None = Field(default=None, max_length=800)
 
 
 class GeminiClaim(BaseModel):
@@ -190,6 +205,16 @@ class AuditedClaim(ParsedClaim):
     decision_rule_id: str = "PM-UNSPECIFIED"
     severity: Severity = "review"
     pinpoint_status: Literal["not_supplied", "matched", "missing", "wrong_proposition"] = "not_supplied"
+    quote_status: Literal["not_present", "matched", "mismatch", "unresolved"] = "not_present"
+    citation_identity_status: Literal[
+        "not_assessed",
+        "matched",
+        "malformed",
+        "unresolved",
+        "court_code_mismatch",
+        "case_name_mismatch",
+    ] = "not_assessed"
+    source_role_status: PassageSourceRole = "unreviewed"
     currency_status: Literal["current_reviewed", "negative_treatment", "not_verified"] = "not_verified"
     assessment_confidence: AssessmentConfidence = "low"
     case_map_version: str | None = None
@@ -202,7 +227,9 @@ class EvaluationFlag(BaseModel):
         "case_name_mismatch",
         "court_code_mismatch",
         "wrong_pinpoint",
+        "quote_mismatch",
         "party_submission_as_holding",
+        "dissent_as_holding",
         "obiter_as_binding",
         "modality_overstatement",
         "material_factual_mismatch",
@@ -270,8 +297,8 @@ class AuditSubmission(BaseModel):
 
     @model_validator(mode="after")
     def require_question_for_full_mode(self) -> AuditSubmission:
-        if self.audit_mode == "full" and not (self.original_question or "").strip():
-            raise ValueError("Full audit mode requires the original legal question")
+        if self.audit_mode == "full":
+            raise ValueError("Full contextual audits are deferred beyond the Tier 0 release; submit a citation-only audit.")
         return self
 
 
@@ -462,6 +489,12 @@ class BenchmarkResult(BaseModel):
     fabrication_precision: float = 0
     fabrication_false_positive_count: int = 0
     confusion_matrix: dict[str, dict[str, int]] = Field(default_factory=dict)
+    citation_identity_precision: float = 0
+    citation_identity_recall: float = 0
+    pinpoint_precision: float = 0
+    pinpoint_recall: float = 0
+    quote_accuracy: float = 0
+    gate_confusion_matrix: dict[str, dict[str, dict[str, int]]] = Field(default_factory=dict)
 
 
 class HealthResponse(BaseModel):

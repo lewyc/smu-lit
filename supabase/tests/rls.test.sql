@@ -62,12 +62,14 @@ set local role anon;
 select throws_ok(
   'select * from public.audit_runs',
   '42501',
+  NULL,
   'anonymous users have no table access'
 );
 
 select throws_ok(
   'select * from public.corpus_refresh_runs',
   '42501',
+  NULL,
   'anonymous users have no corpus refresh metadata access'
 );
 
@@ -96,12 +98,14 @@ select throws_ok(
        1, 'local', 'verified', 'tamper', false
      ) $$,
   '42501',
+  NULL,
   'authenticated clients cannot insert derived claims'
 );
 
 select throws_ok(
   $$ update public.audit_runs set engine_version = 'tampered' $$,
   '42501',
+  NULL,
   'authenticated clients cannot update audit runs'
 );
 
@@ -116,6 +120,7 @@ select throws_ok(
        profile_version, status, requested_limit
      ) values ('test', 'queued', 1) $$,
   '42501',
+  NULL,
   'authenticated browser clients cannot create corpus refreshes'
 );
 
@@ -134,6 +139,7 @@ select results_eq(
 select throws_ok(
   $$ update public.case_map_runs set status = 'approved' $$,
   '42501',
+  NULL,
   'authenticated browser members cannot approve Case Maps'
 );
 
@@ -146,6 +152,7 @@ select throws_ok(
        '11111111-1111-1111-1111-111111111111', 'other', 'browser tamper'
      ) $$,
   '42501',
+  NULL,
   'feedback mutations are routed through FastAPI'
 );
 
@@ -157,6 +164,7 @@ select throws_ok(
        1, 'later_treatment', 'limits', 1
      ) $$,
   '42501',
+  NULL,
   'authenticated browser members cannot write lawyer-reviewed currency records'
 );
 

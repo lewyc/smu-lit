@@ -1,0 +1,257 @@
+{
+  "batch_id": "manual-retrieval-2026-09-06-02",
+  "status": "awaiting_legal_review",
+  "generated_at": "2026-09-06T00:20:00+08:00",
+  "retrieval_method": "chrome_manual",
+  "source_host": "www.elitigation.sg",
+  "runtime_use": "research_only_not_loaded_by_active_corpus",
+  "manual_verification": {
+    "browser": "Google Chrome",
+    "page_check": "Each official URL rendered and the listed paragraph locator was found or queued for source-text review.",
+    "retrieved_at": "2026-09-06T00:20:00+08:00"
+  },
+  "raw_text_policy": "Raw judgment text and unreviewed extracts are intentionally not committed. Export exact passages and hashes only after a lawyer approves each Case Map.",
+  "source_dataset": {
+    "name": "SG-LegalCite COMBINED_ALL_CASES_FINAL_V2.csv",
+    "local_path_from_repo_root": "../SG-LegalCite/COMBINED_ALL_CASES_FINAL_V2.csv",
+    "source_url": "https://github.com/anonymousmeowmeow/SG-LegalCite",
+    "licence": "CC BY 4.0",
+    "selection_filter": "Remaining high-frequency Singapore eLitigation rows matching restraint-of-trade, confidentiality, employment, or injunction principles",
+    "matching_rows_in_batch": 324,
+    "candidate_judgment_urls_before_batch": 78
+  },
+  "records": [
+    {
+      "citation": "[2007] SGHC 5",
+      "case_name": "Wong Bark Chuan David v Man Financial (S) Pte Ltd",
+      "court": "High Court",
+      "decision_date": "2007-01-18",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2007_SGHC_5",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 39,
+      "topic_tags": ["restraint_of_trade", "legitimate_interest", "scope", "confidential_information", "severance"],
+      "paragraph_targets": [
+        {"label": "[165]-[175]", "topic": "legitimate interest and evidential burden"},
+        {"label": "[176]-[194]", "topic": "scope, geography, anti-competition and severance"},
+        {"label": "[220]", "topic": "judgment outcome"}
+      ],
+      "outcome_status": "judgment_for_plaintiff_compensation",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2011] SGHC 241",
+      "case_name": "Mano Vikrant Singh v Cargill TSF Asia Pte Ltd",
+      "court": "High Court",
+      "decision_date": "2011-11-08",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2011_SGHC_241",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 34,
+      "topic_tags": ["restraint_of_trade", "forfeiture_clause", "reasonableness", "severance"],
+      "paragraph_targets": [
+        {"label": "[1]-[2]", "topic": "employment restraint and deferred incentive issue"},
+        {"label": "[27]", "topic": "restraint does not automatically make a clause void"},
+        {"label": "[73]-[78]", "topic": "reasonableness and blue-pencil severance"},
+        {"label": "[86]", "topic": "application outcome"}
+      ],
+      "outcome_status": "application_dismissed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2013] SGHC 4",
+      "case_name": "Centre for Creative Leadership (CCL) Pte Ltd v Byrne Roger Peter and others",
+      "court": "High Court",
+      "decision_date": "2013-01-11",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2013_SGHC_4",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 41,
+      "topic_tags": ["restraint_of_trade", "trade_connections", "confidential_information", "scope", "duration", "severance"],
+      "paragraph_targets": [
+        {"label": "[46]-[55]", "topic": "legitimate proprietary interests"},
+        {"label": "[110]-[121]", "topic": "duration and geographical scope"},
+        {"label": "[131]-[133]", "topic": "blue-pencil severance"},
+        {"label": "[220]", "topic": "non-compete enforceability outcome"}
+      ],
+      "outcome_status": "restraint_unenforceable_preliminary_issue",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2023] SGHC 317",
+      "case_name": "Swift Maids Pte Ltd and another v Cheong Yi Qiang and others",
+      "court": "General Division of the High Court",
+      "decision_date": "2023-11-02",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2023_SGHC_317",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 45,
+      "topic_tags": ["employment_duties", "breach_of_confidence", "fiduciary_duties", "solicitation", "remedies"],
+      "paragraph_targets": [
+        {"label": "[43]-[49]", "topic": "contractual employment duties and competition"},
+        {"label": "[50]-[62]", "topic": "confidential information and breach framework"},
+        {"label": "[211]-[218]", "topic": "employee fiduciary relationship analysis"},
+        {"label": "[231]-[238]", "topic": "mixed claims outcome and remedies"}
+      ],
+      "outcome_status": "contract_claim_partly_awarded_other_claims_dismissed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2020] SGCA 32",
+      "case_name": "I-Admin (Singapore) Pte Ltd v Hong Ying Ting and others",
+      "court": "Court of Appeal",
+      "decision_date": "2020-01-30",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2020_SGCA_32",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 21,
+      "topic_tags": ["breach_of_confidence", "unauthorised_acquisition", "burden_of_proof", "injunction", "equitable_damages"],
+      "paragraph_targets": [
+        {"label": "[43]-[46]", "topic": "traditional breach of confidence elements"},
+        {"label": "[61]-[65]", "topic": "modified approach and burden shift"},
+        {"label": "[67]-[71]", "topic": "injunction and delivery-up remedies"},
+        {"label": "[80]-[81]", "topic": "appeal and equitable damages outcome"}
+      ],
+      "outcome_status": "appeal_allowed_in_part_equitable_damages_assessed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2018] SGHC 129",
+      "case_name": "Adinop Co Ltd v Rovithai Ltd and another",
+      "court": "High Court",
+      "decision_date": "2018-05-30",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2018_SGHC_129",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 15,
+      "topic_tags": ["confidentiality_agreement", "customer_information", "unauthorised_use", "commercial_relationship"],
+      "paragraph_targets": [
+        {"label": "[39]-[44]", "topic": "contractual confidentiality obligations"},
+        {"label": "[99]-[111]", "topic": "customer information and authorised use"},
+        {"label": "[117]-[120]", "topic": "summary findings and dismissal"}
+      ],
+      "outcome_status": "action_dismissed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2015] SGHC 202",
+      "case_name": "Jardine Lloyd Thompson Pte Ltd v Howden Insurance Brokers (S) Pte Ltd and others",
+      "court": "High Court",
+      "decision_date": "2015-08-03",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2015_SGHC_202",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 15,
+      "topic_tags": ["interim_injunction", "springboard_injunction", "confidential_information", "non_solicitation", "employment_duties"],
+      "paragraph_targets": [
+        {"label": "[6]", "topic": "interim-injunction threshold"},
+        {"label": "[13]-[23]", "topic": "springboard relief and time limit"},
+        {"label": "[26]-[30]", "topic": "confidentiality and solicitation injunctions"}
+      ],
+      "outcome_status": "springboard_injunctions_dismissed_conventional_injunctions_granted",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2024] SGHC 286",
+      "case_name": "Farm to Fork Sdn Bhd v Adamas Sg Pte Ltd and another",
+      "court": "General Division of the High Court",
+      "decision_date": "2024-11-14",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2024_SGHC_286",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 15,
+      "topic_tags": ["breach_of_confidence", "non_solicitation", "confidentiality_obligations", "injunction", "equitable_damages"],
+      "paragraph_targets": [
+        {"label": "[234]", "topic": "confidentiality and non-solicitation breach finding"},
+        {"label": "[269]-[274]", "topic": "delivery-up and injunction scope"},
+        {"label": "[277]-[281]", "topic": "equitable damages and conclusion"}
+      ],
+      "outcome_status": "claims_dismissed_counterclaim_partly_allowed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2006] SGHC 107",
+      "case_name": "Vestwin Trading Pte Ltd and Another v Obegi Melissa and Others",
+      "court": "High Court",
+      "decision_date": "2006-06-27",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2006_SGHC_107",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 31,
+      "topic_tags": ["breach_of_confidence", "confidential_information", "unauthorised_use", "permanent_injunction", "damages"],
+      "paragraph_targets": [
+        {"label": "[35]", "topic": "scope of confidence protection"},
+        {"label": "[64]-[69]", "topic": "awareness and unauthorised use"},
+        {"label": "[78]-[80]", "topic": "permanent injunction and damages inquiry"}
+      ],
+      "outcome_status": "permanent_and_mandatory_injunctions_granted",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2017] SGCA 23",
+      "case_name": "Wee Shuo Woon v HT S.R.L.",
+      "court": "Court of Appeal",
+      "decision_date": "2016-11-18",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2017_SGCA_23",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 18,
+      "topic_tags": ["breach_of_confidence", "public_domain", "legal_professional_privilege", "injunction", "employment_duties"],
+      "paragraph_targets": [
+        {"label": "[35]-[40]", "topic": "accessibility and public-domain analysis"},
+        {"label": "[43]-[44]", "topic": "confidential and privileged status"},
+        {"label": "[49]-[63]", "topic": "restraint of use and appeal outcome"}
+      ],
+      "outcome_status": "appeal_dismissed_with_costs",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2018] SGHC 85",
+      "case_name": "Tan Kok Yong Steve v Itochu Singapore Pte Ltd",
+      "court": "High Court",
+      "decision_date": "2018-04-10",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2018_SGHC_85",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 23,
+      "topic_tags": ["restraint_of_trade", "trade_connections", "scope", "duration", "injunction", "damages"],
+      "paragraph_targets": [
+        {"label": "[89]-[105]", "topic": "reasonableness of activity, geography and time"},
+        {"label": "[107]-[110]", "topic": "injunction and livelihood"},
+        {"label": "[118]-[122]", "topic": "counterclaim and final relief"}
+      ],
+      "outcome_status": "counterclaim_injunction_granted_claim_partly_allowed",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    },
+    {
+      "citation": "[2025] SGHC 41",
+      "case_name": "Hayate Partners Pte Ltd v Rajan Sunil Kumar",
+      "court": "General Division of the High Court",
+      "decision_date": "2025-03-14",
+      "official_url": "https://www.elitigation.sg/gdviewer/s/2025_SGHC_41",
+      "page_variant": "gdviewer/s",
+      "dataset_match_count": 27,
+      "topic_tags": ["breach_of_confidence", "employment_duties", "unauthorised_access", "retention", "injunction", "equitable_damages"],
+      "paragraph_targets": [
+        {"label": "[145]-[146]", "topic": "necessary quality of confidence and burden shift"},
+        {"label": "[161]", "topic": "contractual confidentiality breach"},
+        {"label": "[174]-[183]", "topic": "injunction, retention and damages"}
+      ],
+      "outcome_status": "claim_allowed_in_part_damages_assessed_injunction_limited",
+      "document_hash": null,
+      "hash_status": "pending_legal_source_export",
+      "review_status": "draft"
+    }
+  ]
+}

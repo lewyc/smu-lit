@@ -1,0 +1,13 @@
+{
+  "release": "tier0-v1-citation-integrity",
+  "attempted_at": "2026-09-05T18:10:52.121683Z",
+  "command": "python -m app.refresh_cli --tier0-target-pack",
+  "status": "fallback",
+  "accepted_documents": 0,
+  "accepted_passages": 0,
+  "rejected_documents": 6,
+  "active_corpus_version": "sg-employment-restraints-auto-empty.1",
+  "fallback_reason": "Refresh failed (RuntimeError); retained sg-employment-restraints-auto-empty.1.",
+  "release_blocker": "Official SG Courts/eLitigation discovery was unavailable; no official snapshot was generated.",
+  "do_not_use_as_evidence": true
+}

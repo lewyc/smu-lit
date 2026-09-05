@@ -63,7 +63,11 @@ class EvidenceMatcher:
         ordered_indexes = sorted(candidate_indexes, key=lambda index: scores[index], reverse=True)[:3]
         for index in ordered_indexes:
             passage = authority.passages[int(index)]
-            supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {"ai_supported", "gold_fixture"}
+            supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {
+                "ai_supported",
+                "human_reviewed",
+                "gold_fixture",
+            }
             relation = "supports" if supports else "unresolved"
             explanation = (
                 "Exact official paragraph selected for this controlled proposition."
@@ -115,6 +119,18 @@ class VerdictEngine:
                 "Use the appropriate legal corpus and subject-matter reviewer.",
                 [],
             )
+        if claim.citation_parse_status == "malformed":
+            result = self._result(
+                claim,
+                "unverified",
+                "The citation format is malformed and cannot be checked against the frozen snapshot.",
+                "Supply a complete Singapore neutral citation before relying on this assertion.",
+                [],
+            )
+            result.citation_identity_status = "malformed"
+            result.decision_rule_id = "PM-CIT-003"
+            return result
+
         if not claim.citation:
             return self._result(
                 claim,
@@ -146,10 +162,11 @@ class VerdictEngine:
                     )
                     result.decision_rule_id = "PM-CIT-004"
                     result.severity = "serious"
+                    result.citation_identity_status = "court_code_mismatch"
                     return result
             negative = self.corpus.negative_check(key)
             if negative and negative.get("exists") is False:
-                return self._result(
+                result = self._result(
                     claim,
                     "likely_fabricated",
                     (
@@ -159,13 +176,17 @@ class VerdictEngine:
                     "Re-run the official Singapore Courts search and confirm the citation.",
                     [],
                 )
-            return self._result(
+                result.citation_identity_status = "unresolved"
+                return result
+            result = self._result(
                 claim,
                 "unverified",
                 "The citation cannot be resolved within the active immutable snapshot.",
                 "Check the citation in an official or comprehensive legal database.",
                 [],
             )
+            result.citation_identity_status = "unresolved"
+            return result
 
         if claim.case_name_mention and not self._case_name_consistent(claim.case_name_mention, authority.case_name):
             result = self._result(
@@ -177,8 +198,10 @@ class VerdictEngine:
             )
             result.decision_rule_id = "PM-CIT-005"
             result.severity = "serious"
+            result.citation_identity_status = "case_name_mismatch"
             return result
 
+        quote_status = self._quote_status(claim, authority)
         evidence = self.matcher.rank(claim, authority)
         supporting = [item for item in evidence if item.relation == "supports"]
         if claim.pinpoint and not evidence:
@@ -190,7 +213,23 @@ class VerdictEngine:
                 [],
             )
             result.pinpoint_status = "missing"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
             result.decision_rule_id = "PM-CIT-006"
+            result.severity = "serious"
+            return result
+        if quote_status == "mismatch":
+            result = self._result(
+                claim,
+                "unsupported",
+                "The direct quote does not appear in the cited, pinpointed official paragraph retained in the frozen snapshot.",
+                "Check the quoted words and pinpoint against the official judgment; Tier 0 does not infer a semantic match.",
+                evidence,
+            )
+            result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.decision_rule_id = "PM-QUO-001"
             result.severity = "serious"
             return result
         if not supporting:
@@ -205,6 +244,24 @@ class VerdictEngine:
                 result.pinpoint_status = "wrong_proposition"
                 result.decision_rule_id = "PM-CIT-007"
                 result.severity = "serious"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            return result
+
+        source_role = self._source_role_for(evidence)
+        if source_role in {"party_submission", "dissent", "obiter", "procedural_history"}:
+            result = self._result(
+                claim,
+                "context_review",
+                f"The supporting passage is reviewer-labelled as {source_role.replace('_', ' ')} rather than a judicial holding.",
+                "A lawyer must confirm the passage's legal role before the assertion is relied on.",
+                evidence,
+            )
+            result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.source_role_status = source_role
+            result.decision_rule_id = "PM-ROLE-001"
             return result
 
         if claim.overgeneralisation_terms or claim.parser_confidence < 0.6:
@@ -222,6 +279,9 @@ class VerdictEngine:
                 evidence,
             )
             result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.source_role_status = source_role
             result.decision_rule_id = "PM-PROP-003"
             return result
 
@@ -234,6 +294,9 @@ class VerdictEngine:
                 evidence,
             )
             result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.source_role_status = source_role
             result.decision_rule_id = "PM-PROP-004"
             return result
 
@@ -254,6 +317,9 @@ class VerdictEngine:
                 evidence,
             )
             result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.source_role_status = source_role
             result.decision_rule_id = "PM-TRUST-001"
             result.assessment_confidence = "medium"
             return result
@@ -267,10 +333,39 @@ class VerdictEngine:
             evidence,
         )
         result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+        result.quote_status = quote_status
+        result.citation_identity_status = "matched"
+        result.source_role_status = source_role
         result.decision_rule_id = "PM-GOLD-001"
         result.severity = "informational"
         result.assessment_confidence = "high"
         return result
+
+    @staticmethod
+    def _normalise_quote(value: str) -> str:
+        return " ".join(re.findall(r"[a-z0-9]+", value.lower()))
+
+    def _quote_status(self, claim: ParsedClaim, authority) -> str:
+        if not claim.quoted_text:
+            return "not_present"
+        candidates = authority.passages
+        if claim.pinpoint:
+            candidates = [passage for passage in candidates if EvidenceMatcher._label_covers(passage.paragraph_label, claim.pinpoint)]
+            if not candidates:
+                return "unresolved"
+        quoted = self._normalise_quote(claim.quoted_text)
+        if any(quoted in self._normalise_quote(passage.text) for passage in candidates):
+            return "matched"
+        # With no pinpoint we cannot infer which unretained paragraph the author intended.
+        return "mismatch" if claim.pinpoint else "unresolved"
+
+    @staticmethod
+    def _source_role_for(evidence: list[Evidence]) -> str:
+        for item in evidence:
+            passage = item.passage
+            if passage.source_role_reviewed:
+                return passage.source_role
+        return "unreviewed"
 
     @staticmethod
     def _result(claim, verdict, rationale, missing, evidence) -> AuditedClaim:
@@ -491,6 +586,16 @@ class AuditEngine:
                 status = statuses.get(normalise_citation(claim.citation))
                 if status in {"current_reviewed", "negative_treatment"}:
                     claim.currency_status = status
+                    if status == "negative_treatment" and claim.verdict == "verified":
+                        claim.verdict = "context_review"
+                        claim.rationale = (
+                            "The benchmark passage matches, but a lawyer-approved treatment record requires "
+                            "currency review before reliance."
+                        )
+                        claim.missing_evidence = "Confirm the later treatment, supersession, or amendment against its official source."
+                        claim.decision_rule_id = "PM-CUR-001"
+                        claim.severity = "review"
+                        claim.assessment_confidence = "medium"
 
     @staticmethod
     def _percent(numerator: int, denominator: int) -> float:
@@ -500,36 +605,198 @@ class AuditEngine:
         # Fixtures are intentionally the only route to the 'verified' class.
         gold_engine = AuditEngine(self.settings, GoldFixtureCorpusRepository())
         fixtures = [
-            ("Employment restraints are prima facie unenforceable [2024] SGHC 29.", "verified", "proposition"),
-            ("A legitimate interest is required [2007] SGCA 53.", "verified", "proposition"),
-            ("All worldwide restraints are automatically void [2019] SGHC 96.", "context_review", "context"),
-            ("Singapore-wide restraints are always unreasonable [2010] SGCA 3.", "context_review", "context"),
-            ("Confidential information is always misused.", "unsupported", "citation"),
-            ("A two-year rule exists [2099] SGCA 999.", "likely_fabricated", "citation"),
-            ("The PDPA permits publication of personal data.", "out_of_scope", "scope"),
-            ("The blue-pencil test does not permit a court to rewrite a restraint [2012] SGCA 39.", "verified", "proposition"),
-            ("Non-solicitation and non-dealing restrictions require separate scrutiny [2024] SGHC 94.", "verified", "proposition"),
-            ("A legitimate interest is required [2007] SGCA 53 at [999].", "unsupported", "citation"),
-            ("A legitimate interest is required [2007] SGHC 53.", "unsupported", "citation"),
-            ("A legitimate interest is required [2024] SGHC 29 at [18].", "unsupported", "proposition"),
+            {
+                "answer": (
+                    'The case states "Reasonableness is assessed both between the contracting parties '
+                    'and with reference to the public interest" [2007] SGCA 53 at [74].'
+                ),
+                "expected": {
+                    "verdict": "verified",
+                    "identity": "matched",
+                    "pinpoint": "matched",
+                    "quote": "matched",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": (
+                    'Every restraint lasts two years because "Reasonableness is assessed both between the contracting '
+                    'parties and with reference to the public interest" [2007] SGCA 53 at [74].'
+                ),
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "matched",
+                    "pinpoint": "wrong_proposition",
+                    "quote": "matched",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": '"An invented quotation" [2007] SGCA 53 at [79] establishes a legitimate proprietary interest.',
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "matched",
+                    "pinpoint": "matched",
+                    "quote": "mismatch",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "Fake Corporation v Nobody states that a legitimate interest is required [2007] SGCA 53.",
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "case_name_mismatch",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "A two-year rule exists [2099] SGCA 999.",
+                "expected": {
+                    "verdict": "likely_fabricated",
+                    "identity": "unresolved",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "The court held a legitimate interest was required [2024] SGHC 94 at [42].",
+                "expected": {
+                    "verdict": "context_review",
+                    "identity": "matched",
+                    "pinpoint": "matched",
+                    "quote": "not_present",
+                    "role": "obiter",
+                },
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGCA 53.",
+                "currency": {"2007SGCA53": "negative_treatment"},
+                "expected": {
+                    "verdict": "context_review",
+                    "identity": "matched",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGHC 53.",
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "court_code_mismatch",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "A restraint is invalid [2025] SGHC 999.",
+                "expected": {
+                    "verdict": "unverified",
+                    "identity": "unresolved",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGCA 53 at [999].",
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "matched",
+                    "pinpoint": "missing",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "2024 SGHC establishes a legal rule.",
+                "expected": {
+                    "verdict": "unverified",
+                    "identity": "malformed",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "Confidential information is always misused.",
+                "expected": {
+                    "verdict": "unsupported",
+                    "identity": "not_assessed",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
+            {
+                "answer": "The PDPA permits publication of personal data.",
+                "expected": {
+                    "verdict": "out_of_scope",
+                    "identity": "not_assessed",
+                    "pinpoint": "not_supplied",
+                    "quote": "not_present",
+                    "role": "unreviewed",
+                },
+            },
         ]
-        results = [gold_engine.audit(AuditSubmission(answer=text, parser_mode="local")).claims[0].verdict for text, _, _ in fixtures]
-        correct = sum(int(actual == expected) for actual, (_, expected, _) in zip(results, fixtures, strict=True))
-        confusion: dict[str, dict[str, int]] = {}
-        for actual, (_, expected, _) in zip(results, fixtures, strict=True):
-            confusion.setdefault(expected, {})[actual] = confusion.setdefault(expected, {}).get(actual, 0) + 1
-        module_accuracy: dict[str, float | None] = {}
-        for module in ("citation", "proposition", "context", "scope", "currency", "balance"):
-            indexes = [index for index, fixture in enumerate(fixtures) if fixture[2] == module]
-            module_accuracy[module] = (
-                self._percent(len([index for index in indexes if results[index] == fixtures[index][1]]), len(indexes)) if indexes else None
+        actuals = []
+        for fixture in fixtures:
+            audit = gold_engine.audit(
+                AuditSubmission(answer=fixture["answer"], parser_mode="local"),
+                fixture.get("currency"),
+                "benchmark-currency" if fixture.get("currency") else "currency-none",
             )
-        predicted_fabricated = [index for index, actual in enumerate(results) if actual == "likely_fabricated"]
-        true_fabricated = [index for index in predicted_fabricated if fixtures[index][1] == "likely_fabricated"]
+            actuals.append(audit.claims[0])
+        fields = {
+            "verdict": lambda claim: claim.verdict,
+            "identity": lambda claim: claim.citation_identity_status,
+            "pinpoint": lambda claim: claim.pinpoint_status,
+            "quote": lambda claim: claim.quote_status,
+            "role": lambda claim: claim.source_role_status,
+        }
+        correct = sum(
+            int(all(getter(claim) == fixture["expected"][field] for field, getter in fields.items()))
+            for claim, fixture in zip(actuals, fixtures, strict=True)
+        )
+        confusion: dict[str, dict[str, int]] = {}
+        gate_confusion: dict[str, dict[str, dict[str, int]]] = {field: {} for field in fields}
+        for claim, fixture in zip(actuals, fixtures, strict=True):
+            expected = fixture["expected"]
+            actual_verdict = claim.verdict
+            confusion.setdefault(expected["verdict"], {})[actual_verdict] = (
+                confusion.setdefault(expected["verdict"], {}).get(actual_verdict, 0) + 1
+            )
+            for field, getter in fields.items():
+                expected_value, actual_value = expected[field], getter(claim)
+                bucket = gate_confusion[field].setdefault(expected_value, {})
+                bucket[actual_value] = bucket.get(actual_value, 0) + 1
+
+        def accuracy(field: str) -> float:
+            getter = fields[field]
+            return self._percent(
+                sum(int(getter(claim) == fixture["expected"][field]) for claim, fixture in zip(actuals, fixtures, strict=True)),
+                len(fixtures),
+            )
+
+        def binary_measure(field: str, positive: set[str]) -> tuple[float, float]:
+            predicted = [index for index, claim in enumerate(actuals) if fields[field](claim) in positive]
+            expected = [index for index, fixture in enumerate(fixtures) if fixture["expected"][field] in positive]
+            true = [index for index in predicted if index in expected]
+            return self._percent(len(true), len(predicted)), self._percent(len(true), len(expected))
+
+        module_accuracy = {field: accuracy(field) for field in fields}
+        identity_precision, identity_recall = binary_measure("identity", {"matched"})
+        pinpoint_precision, pinpoint_recall = binary_measure("pinpoint", {"matched"})
+        predicted_fabricated = [index for index, claim in enumerate(actuals) if claim.verdict == "likely_fabricated"]
+        true_fabricated = [index for index in predicted_fabricated if fixtures[index]["expected"]["verdict"] == "likely_fabricated"]
         fabricated_false_positives = len(predicted_fabricated) - len(true_fabricated)
         latencies: list[float] = []
         errors = 0
-        perf_input = AuditSubmission(answer=fixtures[0][0], parser_mode="local")
+        perf_input = AuditSubmission(answer=fixtures[0]["answer"], parser_mode="local")
         for _ in range(performance_runs):
             try:
                 latencies.append(gold_engine.audit(perf_input).processing_duration_ms)
@@ -561,4 +828,10 @@ class AuditEngine:
             fabrication_precision=self._percent(len(true_fabricated), len(predicted_fabricated)),
             fabrication_false_positive_count=fabricated_false_positives,
             confusion_matrix=confusion,
+            citation_identity_precision=identity_precision,
+            citation_identity_recall=identity_recall,
+            pinpoint_precision=pinpoint_precision,
+            pinpoint_recall=pinpoint_recall,
+            quote_accuracy=accuracy("quote"),
+            gate_confusion_matrix=gate_confusion,
         )

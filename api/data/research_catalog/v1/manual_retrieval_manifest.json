@@ -1,0 +1,24 @@
+{
+  "manifest_version": "v1",
+  "status": "awaiting_legal_review",
+  "retrieval_method": "chrome_manual_rendered_page",
+  "source_host": "www.elitigation.sg",
+  "source_queues": [
+    "url_queue_01.json",
+    "url_queue_02.json",
+    "url_queue_03.json"
+  ],
+  "retrieval_partitions": [
+    "manual_retrieval_queue_01.json",
+    "manual_retrieval_queue_02.json",
+    "manual_retrieval_queue_03.json"
+  ],
+  "priority_urls": 78,
+  "retrieved_records": 78,
+  "accessible_records": 78,
+  "failed_records": 0,
+  "blocked_records": 0,
+  "unique_urls": 78,
+  "runtime_use": "research_only_not_loaded_by_active_corpus",
+  "raw_text_policy": "Only rendered-page metadata, normalized topic signals, and paragraph-label navigation metadata are stored. Exact judgment passages and hashes remain pending lawyer-approved Case Maps."
+}
