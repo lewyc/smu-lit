@@ -8,9 +8,11 @@ case-law database.
 ## Working vertical slice
 
 ```text
-Pasted AI answer -> parsed legal claims -> exact citation resolution
--> proposition-aware evidence matching -> deterministic verdicts
--> lawyer handoff -> optional Supabase persistence
+Official snapshot -> paragraph-anchored Case Map draft -> lawyer approval
+Pasted AI answer + optional question/facts -> parsed legal claims
+-> citation, pinpoint, modality, context, currency and omission checks
+-> deterministic scores and verdicts -> lawyer handoff and feedback review
+-> optional Supabase persistence
 ```
 
 The dashboard runs locally. In `demo` mode it needs no account or cloud
@@ -40,6 +42,29 @@ npm run dev
 Open `http://localhost:5173`, choose **New audit**, load the demonstration
 answer, and run it. API documentation is at `http://127.0.0.1:8000/docs`.
 
+Use **Citation only** for the original answer-only flow. Use **Full** to add the
+original question and facts; this enables contextual distinctions, issue
+omissions, balance prompts, and the weighted four-module score. A total is
+withheld whenever a required module (for example reviewed currency data) is
+unavailable rather than renormalising incomplete evidence.
+
+The **Case Maps** workbench can generate a draft from any authority in the
+active immutable snapshot. Gemini is optional: without a key, the local
+fallback creates conservative paragraph-anchored draft records from existing
+labels. Exact quotes and paragraph ownership are validated deterministically.
+Reviewer corrections create a superseding version; approval never promotes a
+runtime result above `context_review`.
+
+Before the first official refresh, the Case Map workbench alone exposes the six
+isolated gold judgments as a clearly labelled preprocessing demo source. This
+does not populate the normal audit corpus and therefore cannot create a
+`verified` runtime result. Once an official snapshot exists, the workbench
+automatically uses that snapshot instead.
+
+Text PDFs up to 15 MB can also create user-supplied Case Map drafts. Encrypted,
+scanned, malformed, and unnumbered PDFs are rejected. The binary is discarded
+after extraction, and a claimed official URL never upgrades its provenance.
+
 ## Create the presentation snapshot
 
 Before the pitch, add GEMINI_API_KEY to api/.env and run this once while the
@@ -65,6 +90,44 @@ Gemini annotation fails, ProofMark keeps the last successful snapshot and says
 that it is cached. Do not claim a live refresh succeeded when the page shows
 the fallback banner.
 
+## Freshness, re-audit, and retention
+
+The API starts an in-process refresh scheduler every 24 hours by default
+(PROOFMARK_REFRESH_INTERVAL_HOURS). It performs the same capped source refresh
+as the manual button, while audits continue to use the last successful
+immutable snapshot. The **Authority inventory** shows the active snapshot time;
+every audit report records that exact snapshot version and a **sources current
+as of** timestamp.
+
+When a newer snapshot becomes active, a saved report shows a stale-source
+banner. Select **Re-audit latest** to make a new linked audit against the
+current corpus; ProofMark does not overwrite the historical result. The
+in-process scheduler is intentionally an MVP convenience: it resets when the
+API process restarts. A durable scheduled job and stateless workers are the
+production path.
+
+ProofMark does not use earlier user answers as legal authority, feedback, or
+training data. It may reuse an exact result only when this cache key matches:
+answer + original question + facts + audit mode + corpus version + engine
+version + parser version + taxonomy version + approved currency-register version.
+
+Thus a new source snapshot, engine rule, parser version, question, facts, or
+mode, or lawyer-approved currency review creates a cache miss and a full
+re-audit. A cache hit is materialised as a new traceable audit, not silently
+substituted for an existing report.
+
+In Supabase mode, raw answer text is retained in the protected audit record and
+its protected reproducibility payload for 30 days by default
+(PROOFMARK_AUDIT_RETENTION_DAYS). Expired audits are excluded from retrieval
+and cache reuse; the audit owner can delete one earlier through the API. Before
+using real client material, deploy a scheduled maintenance worker to physically
+purge expired rows and agree a client-specific retention policy.
+
+Later treatment, supersession, and statutory-amendment records are human-only
+review data. Reviewer/owner access is required for the currency-record API;
+the model cannot create those records and normal audits remain transparent when
+currency has not been reviewed.
+
 ## Modes and secrets
 
 - `demo` is the presentation-safe default. It runs the real local FastAPI
@@ -82,7 +145,7 @@ seed passages with the legal-research team.
 
 ## Connected Supabase setup
 
-For the connected mode, review and apply both migration files in order to
+For the connected mode, review and apply all migration files in order to
 project zxjaccusnmunjgktzkme:
 
 ~~~powershell
@@ -91,10 +154,11 @@ npx supabase@latest db push
 ~~~
 
 This requires the project database password and does not require Docker.
-Alternatively, run the two SQL files in supabase/migrations/ in order in the
-Supabase SQL Editor. The second migration creates corpus_refresh_runs,
-provenance fields, an immutable-content trigger, a coverage view, explicit
-Data API grants, RLS, and a service-role-only transactional snapshot activator.
+Alternatively, run every SQL file in supabase/migrations/ in timestamp order
+in the Supabase SQL Editor. The migrations create corpus refresh/provenance,
+immutable-content controls, coverage metadata, source-versioned audit cache
+and retention fields, reviewer-only legal-currency records, explicit Data API
+grants, RLS, and a service-role-only transactional snapshot activator.
 Browser clients can read allowed metadata but cannot write refreshes, corpus
 content, derived evidence, or verdicts.
 
@@ -114,10 +178,16 @@ npm run build
 ## Scope boundary
 
 The active corpus covers only Singapore employment restraint-of-trade material
-that passed the automated official-source gates. The former four selected cases
-are hand-labelled **benchmark gold fixtures only**. They are the sole pathway
+that passed the automated official-source gates. Six selected cases are
+isolated as **benchmark gold fixtures only**. They are the sole pathway
 to the verified fixture label; an official, AI-supported runtime paragraph can
 produce only context_review.
+
+The two newly added Smile Inc and MoneySmart fixture extracts are explicitly
+marked for legal-team verification in their passage limitations. Do not quote
+their paraphrases or present their expected labels until counsel has checked
+the linked official judgments. Secondary journals and articles are metadata
+only; ProofMark does not ship or reproduce their text.
 
 SAL, SLR, and LawNet are deliberately excluded from this MVP. A future
 LicensedSourceConnector may ingest private tenant material only when the

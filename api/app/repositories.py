@@ -1,12 +1,23 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import hashlib
+import json
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID
 
 from app.config import Settings
 from app.corpus import ActiveCorpusRepository
-from app.models import AuditDetail, AuditSummary, RefreshRun
+from app.models import (
+    AuditDetail,
+    AuditSummary,
+    CaseMapDetail,
+    LegalCurrencyRecord,
+    LegalCurrencyRecordSubmission,
+    PractitionerFeedback,
+    RefreshRun,
+)
+from app.parsers import normalise_citation
 
 
 class AuditRepository(Protocol):
@@ -15,6 +26,10 @@ class AuditRepository(Protocol):
     def get(self, public_id: UUID) -> AuditDetail | None: ...
 
     def list(self) -> list[AuditSummary]: ...
+
+    def find_cached(self, cache_key: str) -> AuditDetail | None: ...
+
+    def delete(self, public_id: UUID) -> bool: ...
 
 
 class LocalAuditRepository:
@@ -32,6 +47,13 @@ class LocalAuditRepository:
         audits = sorted(self._audits.values(), key=lambda item: item.created_at, reverse=True)
         return [AuditSummary(**item.model_dump()) for item in audits]
 
+    def find_cached(self, cache_key: str) -> AuditDetail | None:
+        matches = [audit for audit in self._audits.values() if audit.audit_cache_key == cache_key]
+        return max(matches, key=lambda item: item.created_at).model_copy(deep=True) if matches else None
+
+    def delete(self, public_id: UUID) -> bool:
+        return self._audits.pop(public_id, None) is not None
+
 
 class SupabaseAuditRepository:
     """Server-side repository. The secret key must never be used by the dashboard."""
@@ -39,6 +61,7 @@ class SupabaseAuditRepository:
     def __init__(self, settings: Settings, bearer_token: str) -> None:
         from supabase import create_client
 
+        self.settings = settings
         if not settings.supabase_secret_key:
             raise RuntimeError("Supabase server-side secret is not configured")
         self.client = create_client(settings.supabase_url, settings.supabase_secret_key)
@@ -46,12 +69,27 @@ class SupabaseAuditRepository:
         if not auth_response.user:
             raise PermissionError("Invalid Supabase bearer token")
         self.user_id = str(auth_response.user.id)
-        membership = self.client.table("organisation_members").select("organisation_id").eq("user_id", self.user_id).limit(1).execute()
+        membership = self.client.table("organisation_members").select("organisation_id,role").eq("user_id", self.user_id).limit(1).execute()
         if not membership.data:
             raise PermissionError("The signed-in user has no ProofMark organisation")
         self.organisation_id = membership.data[0]["organisation_id"]
+        self.role = membership.data[0]["role"]
 
     def save(self, audit: AuditDetail) -> AuditDetail:
+        retention_expires_at = datetime.now(UTC) + timedelta(days=self.settings.audit_retention_days)
+        re_audited_from_id = None
+        if audit.re_audited_from_public_id:
+            previous = (
+                self.client.table("audit_runs")
+                .select("id")
+                .eq("organisation_id", self.organisation_id)
+                .eq("public_id", str(audit.re_audited_from_public_id))
+                .maybe_single()
+                .execute()
+            )
+            if not previous.data:
+                raise PermissionError("The source audit is not in the signed-in organisation")
+            re_audited_from_id = previous.data["id"]
         run_payload = {
             "organisation_id": self.organisation_id,
             "created_by": self.user_id,
@@ -61,9 +99,29 @@ class SupabaseAuditRepository:
             "corpus_version": audit.corpus_version,
             "engine_version": audit.engine_version,
             "parser_mode": audit.parser_used,
+            "parser_version": audit.parser_version,
+            "audit_cache_key": audit.audit_cache_key,
+            "cache_status": audit.cache_status,
+            "source_checked_at": audit.source_checked_at.isoformat() if audit.source_checked_at else None,
+            "currency_registry_version": audit.currency_registry_version,
+            "retention_expires_at": retention_expires_at.isoformat(),
+            "re_audited_from_id": re_audited_from_id,
             "processing_duration_ms": audit.processing_duration_ms,
             "summary_metrics": audit.metrics.model_dump(),
             "summary_counts": audit.summary_counts,
+            "audit_mode": audit.audit_mode,
+            "original_question": audit.original_question,
+            "facts": audit.facts,
+            "module_scores": {
+                "citation": audit.metrics.citation_integrity_module.model_dump() if audit.metrics.citation_integrity_module else None,
+                "proposition": (
+                    audit.metrics.propositional_accuracy_module.model_dump() if audit.metrics.propositional_accuracy_module else None
+                ),
+                "currency": audit.metrics.relevance_currency_module.model_dump() if audit.metrics.relevance_currency_module else None,
+                "balance": audit.metrics.balance_completeness_module.model_dump() if audit.metrics.balance_completeness_module else None,
+                "overall": audit.metrics.overall_score,
+            },
+            "evaluation_provenance": audit.evaluation_provenance,
             "result_payload": audit.model_dump(mode="json"),
             "completed_at": audit.created_at.isoformat(),
         }
@@ -132,6 +190,7 @@ class SupabaseAuditRepository:
             .select("result_payload")
             .eq("organisation_id", self.organisation_id)
             .eq("public_id", str(public_id))
+            .gt("retention_expires_at", datetime.now(UTC).isoformat())
             .maybe_single()
             .execute()
         )
@@ -145,10 +204,36 @@ class SupabaseAuditRepository:
             .select("result_payload")
             .eq("organisation_id", self.organisation_id)
             .order("created_at", desc=True)
+            .gt("retention_expires_at", datetime.now(UTC).isoformat())
             .limit(100)
             .execute()
         )
         return [AuditSummary(**AuditDetail.model_validate(row["result_payload"]).model_dump()) for row in response.data]
+
+    def find_cached(self, cache_key: str) -> AuditDetail | None:
+        response = (
+            self.client.table("audit_runs")
+            .select("result_payload")
+            .eq("organisation_id", self.organisation_id)
+            .eq("audit_cache_key", cache_key)
+            .eq("status", "complete")
+            .gt("retention_expires_at", datetime.now(UTC).isoformat())
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return AuditDetail.model_validate(response.data[0]["result_payload"]) if response.data else None
+
+    def delete(self, public_id: UUID) -> bool:
+        response = (
+            self.client.table("audit_runs")
+            .delete()
+            .eq("organisation_id", self.organisation_id)
+            .eq("created_by", self.user_id)
+            .eq("public_id", str(public_id))
+            .execute()
+        )
+        return bool(response.data)
 
 
 class SupabaseCorpusRefreshRepository:
@@ -225,3 +310,251 @@ class SupabaseCorpusRefreshRepository:
             .execute()
         )
         return RefreshRun.model_validate(response.data[0]) if response.data else None
+
+
+class SupabaseGovernanceRepository(SupabaseAuditRepository):
+    """Persists review overlays with the service secret after membership checks."""
+
+    def persist_case_map(self, case_map: CaseMapDetail) -> CaseMapDetail:
+        existing = (
+            self.client.table("case_map_runs")
+            .select("id")
+            .eq("organisation_id", self.organisation_id)
+            .eq("public_id", str(case_map.public_id))
+            .maybe_single()
+            .execute()
+        )
+        source: dict[str, int | None] = {"authority_id": None, "source_import_id": None}
+        if case_map.source_provenance == "user_supplied":
+            imported = (
+                self.client.table("source_imports")
+                .upsert(
+                    {
+                        "organisation_id": self.organisation_id,
+                        "imported_by": self.user_id,
+                        "filename": f"{case_map.case_name}.pdf",
+                        "expected_citation": case_map.citation,
+                        "normalised_citation_key": case_map.citation_key,
+                        "stated_official_url": case_map.source_url,
+                        "document_hash": case_map.document_hash,
+                        "source_provenance": "user_supplied",
+                        "extracted_paragraphs": [item.model_dump(mode="json") for item in case_map.source_paragraphs],
+                        "warnings": ["User-supplied material is never treated as an official source."],
+                    },
+                    on_conflict="organisation_id,document_hash",
+                )
+                .execute()
+            )
+            source["source_import_id"] = imported.data[0]["id"]
+        else:
+            authority = (
+                self.client.table("authorities")
+                .select("id")
+                .eq("normalised_citation_key", case_map.citation_key)
+                .eq("document_hash", case_map.document_hash)
+                .limit(1)
+                .execute()
+            )
+            if not authority.data:
+                raise RuntimeError("The Case Map source hash is not present in Supabase")
+            source["authority_id"] = authority.data[0]["id"]
+
+        payload = {
+            "organisation_id": self.organisation_id,
+            "created_by": self.user_id,
+            "public_id": str(case_map.public_id),
+            "normalised_citation_key": case_map.citation_key,
+            "document_hash": case_map.document_hash,
+            "schema_version": case_map.schema_version,
+            "map_version": case_map.version,
+            "model_version": case_map.model,
+            "prompt_version": case_map.prompt_version,
+            "annotator_version": case_map.annotator_version,
+            "extractor_version": case_map.extractor_version,
+            "status": case_map.status,
+            "validation_errors": case_map.validation_errors,
+            "reviewed_by": str(case_map.reviewer_id) if case_map.reviewer_id else None,
+            "reviewed_at": case_map.reviewed_at.isoformat() if case_map.reviewed_at else None,
+            **source,
+        }
+        if existing.data:
+            run_id = existing.data["id"]
+            self.client.table("case_map_runs").update(payload).eq("id", run_id).execute()
+            if case_map.status == "approved":
+                self.client.table("case_map_annotations").update({"review_status": "approved"}).eq("case_map_run_id", run_id).execute()
+                self.client.table("case_map_review_events").insert(
+                    {
+                        "case_map_run_id": run_id,
+                        "actor_id": self.user_id,
+                        "event_type": "approve",
+                        "new_value": {"version": case_map.version, "status": case_map.status},
+                    }
+                ).execute()
+        else:
+            created = self.client.table("case_map_runs").insert(payload).execute()
+            run_id = created.data[0]["id"]
+            annotation_rows = [
+                {
+                    "case_map_run_id": run_id,
+                    "annotation_type": annotation.annotation_type,
+                    "proposition_code": annotation.proposition_code,
+                    "statement": annotation.statement,
+                    "paragraph_labels": annotation.paragraph_labels,
+                    "supporting_quote": annotation.supporting_quote,
+                    "modality": annotation.modality,
+                    "limitations": annotation.limitations,
+                    "applicability_factors": annotation.applicability_factors,
+                    "model_confidence": annotation.model_confidence,
+                    "validation_status": annotation.validation_status,
+                    "validation_messages": annotation.validation_messages,
+                    "review_status": annotation.review_status,
+                }
+                for annotation in case_map.annotations
+            ]
+            if annotation_rows:
+                self.client.table("case_map_annotations").insert(annotation_rows).execute()
+            self.client.table("case_map_review_events").insert(
+                {
+                    "case_map_run_id": run_id,
+                    "actor_id": self.user_id,
+                    "event_type": "approve" if case_map.status == "approved" else "edit",
+                    "new_value": {"version": case_map.version, "status": case_map.status},
+                }
+            ).execute()
+        supersedes = next((event.get("supersedes") for event in case_map.revision_history if event.get("supersedes")), None)
+        if supersedes:
+            self.client.table("case_map_runs").update({"status": "superseded"}).eq("organisation_id", self.organisation_id).eq(
+                "public_id", supersedes
+            ).execute()
+        return case_map
+
+    def persist_feedback(self, feedback: PractitionerFeedback) -> PractitionerFeedback:
+        run = (
+            self.client.table("audit_runs")
+            .select("id")
+            .eq("organisation_id", self.organisation_id)
+            .eq("public_id", str(feedback.audit_public_id))
+            .maybe_single()
+            .execute()
+        )
+        if not run.data:
+            raise PermissionError("Audit not found in the signed-in organisation")
+        claim = (
+            self.client.table("audit_claims")
+            .select("id")
+            .eq("audit_run_id", run.data["id"])
+            .eq("claim_order", feedback.claim_order)
+            .maybe_single()
+            .execute()
+        )
+        if not claim.data:
+            raise LookupError("Audit claim not found")
+        self.client.table("practitioner_feedback").insert(
+            {
+                "public_id": str(feedback.public_id),
+                "organisation_id": self.organisation_id,
+                "audit_claim_id": claim.data["id"],
+                "submitted_by": self.user_id,
+                "category": feedback.category,
+                "explanation": feedback.explanation,
+                "proposed_citation": feedback.proposed_citation,
+                "proposed_paragraph": feedback.proposed_paragraph,
+                "proposed_correction": feedback.proposed_correction,
+                "status": feedback.status,
+            }
+        ).execute()
+        return feedback.model_copy(update={"organisation_id": self.organisation_id, "submitted_by": UUID(self.user_id)})
+
+    def persist_feedback_resolution(self, feedback: PractitionerFeedback) -> PractitionerFeedback:
+        self.client.table("practitioner_feedback").update(
+            {
+                "status": feedback.status,
+                "resolution_note": feedback.resolution_note,
+                "resolved_by": self.user_id,
+                "resolved_at": feedback.resolved_at.isoformat() if feedback.resolved_at else datetime.now(UTC).isoformat(),
+            }
+        ).eq("organisation_id", self.organisation_id).eq("public_id", str(feedback.public_id)).execute()
+        return feedback.model_copy(update={"organisation_id": self.organisation_id, "resolved_by": UUID(self.user_id)})
+
+    def persist_legal_currency_record(self, submission: LegalCurrencyRecordSubmission) -> LegalCurrencyRecord:
+        active_corpus = self.client.table("authority_corpora").select("id").eq("is_active", True).maybe_single().execute()
+        if not active_corpus.data:
+            raise RuntimeError("No active official corpus is available for a currency record")
+
+        def authority_id(citation: str) -> int:
+            result = (
+                self.client.table("authorities")
+                .select("id")
+                .eq("corpus_id", active_corpus.data["id"])
+                .eq("normalised_citation_key", normalise_citation(citation))
+                .maybe_single()
+                .execute()
+            )
+            if not result.data:
+                raise LookupError(f"{citation} is not present in the active official snapshot")
+            return result.data["id"]
+
+        target_authority_id = authority_id(submission.authority_citation)
+        source_authority_id = authority_id(submission.source_citation) if submission.source_citation else None
+        reviewed_at = datetime.now(UTC)
+        self.client.table("legal_currency_records").insert(
+            {
+                "organisation_id": self.organisation_id,
+                "authority_id": target_authority_id,
+                "record_type": submission.record_type,
+                "treatment": submission.treatment,
+                "source_authority_id": source_authority_id,
+                "statute_reference": submission.statute_reference,
+                "effective_date": submission.effective_date.isoformat() if submission.effective_date else None,
+                "note": submission.note,
+                "review_status": "approved",
+                "reviewed_by": self.user_id,
+                "reviewed_at": reviewed_at.isoformat(),
+            }
+        ).execute()
+        return LegalCurrencyRecord(
+            **submission.model_dump(),
+            review_status="approved",
+            reviewed_by=UUID(self.user_id),
+            reviewed_at=reviewed_at,
+        )
+
+    def currency_context(self) -> tuple[dict[str, str], str]:
+        records = (
+            self.client.table("legal_currency_records")
+            .select("authority_id,treatment,reviewed_at")
+            .eq("organisation_id", self.organisation_id)
+            .eq("review_status", "approved")
+            .execute()
+            .data
+        )
+        if not records:
+            return {}, "currency-none"
+        authority_ids = list({item["authority_id"] for item in records})
+        authorities = self.client.table("authorities").select("id,normalised_citation_key").in_("id", authority_ids).execute().data
+        citation_by_id = {item["id"]: item["normalised_citation_key"] for item in authorities}
+        statuses: dict[str, str] = {}
+        for record in records:
+            citation_key = citation_by_id.get(record["authority_id"])
+            if not citation_key:
+                continue
+            status = "negative_treatment" if record["treatment"] in {"limits", "overrules", "supersedes", "amends"} else "current_reviewed"
+            # A negative record must always win over a later positive review.
+            if statuses.get(citation_key) != "negative_treatment":
+                statuses[citation_key] = status
+        material = [
+            {
+                "citation_key": citation_by_id.get(item["authority_id"]),
+                "treatment": item["treatment"],
+                "reviewed_at": item["reviewed_at"],
+            }
+            for item in records
+            if citation_by_id.get(item["authority_id"])
+        ]
+        version = (
+            "currency-"
+            + hashlib.sha256(
+                json.dumps(sorted(material, key=lambda item: json.dumps(item, sort_keys=True)), sort_keys=True).encode("utf-8")
+            ).hexdigest()[:16]
+        )
+        return statuses, version

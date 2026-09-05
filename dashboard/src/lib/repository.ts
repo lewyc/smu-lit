@@ -8,6 +8,10 @@ import type {
   BenchmarkResult,
   CorpusMetadata,
   RefreshRun,
+  CaseMapAnnotation,
+  CaseMapDetail,
+  FeedbackSubmission,
+  PractitionerFeedback,
 } from '../types'
 import { DEMO_ANSWER, savedDemoResult } from './demo'
 import { accessToken, apiUrl, dataMode } from './supabase'
@@ -17,7 +21,7 @@ const CACHE_KEY = 'proofmark:last-audit'
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await accessToken()
   const headers = new Headers(init?.headers)
-  headers.set('Content-Type', 'application/json')
+  if (!(init?.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
   const response = await fetch(`${apiUrl}${path}`, { ...init, headers })
   if (!response.ok) {
@@ -86,12 +90,34 @@ export class ApiAuditRepository implements AuditRepository {
     }
   }
 
+  async reAudit(publicId: string): Promise<AuditDetail> {
+    const audit = await request<AuditDetail>('/api/v1/audits/' + publicId + '/re-audit', { method: 'POST' })
+    store(audit)
+    return audit
+  }
+
+  async deleteAudit(publicId: string): Promise<void> {
+    const token = await accessToken()
+    const headers = new Headers()
+    if (token) headers.set('Authorization', 'Bearer ' + token)
+    const response = await fetch(apiUrl + '/api/v1/audits/' + publicId, { method: 'DELETE', headers })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null)
+      throw new Error(payload?.detail ?? 'Audit could not be deleted')
+    }
+    if (cached(publicId) && typeof sessionStorage !== 'undefined') sessionStorage.removeItem(CACHE_KEY)
+  }
+
   runBenchmark(): Promise<BenchmarkResult> {
     return request('/api/v1/benchmarks/run', { method: 'POST' })
   }
 
   listAuthorities(): Promise<Authority[]> {
     return request('/api/v1/authorities')
+  }
+
+  listCaseMapSources(): Promise<Authority[]> {
+    return request('/api/v1/case-map-sources')
   }
 
   async getCorpus(): Promise<CorpusMetadata> {
@@ -118,6 +144,40 @@ export class ApiAuditRepository implements AuditRepository {
     } catch {
       return DEMO_ANSWER
     }
+  }
+
+  listCaseMaps(): Promise<CaseMapDetail[]> {
+    return request('/api/v1/case-maps')
+  }
+
+  generateCaseMap(citation: string): Promise<CaseMapDetail> {
+    return request('/api/v1/case-maps/generate', { method: 'POST', body: JSON.stringify({ citation }) })
+  }
+
+  importCaseMapPdf(file: File, expectedCitation: string, officialUrl?: string): Promise<CaseMapDetail> {
+    const body = new FormData()
+    body.set('file', file)
+    body.set('expected_citation', expectedCitation)
+    if (officialUrl) body.set('official_url', officialUrl)
+    return request('/api/v1/case-maps/import-pdf', { method: 'POST', body })
+  }
+
+  reviseCaseMap(publicId: string, annotationId: string, revision: Partial<CaseMapAnnotation>): Promise<CaseMapDetail> {
+    return request(`/api/v1/case-maps/${publicId}/annotations/${annotationId}`, {
+      method: 'PATCH', body: JSON.stringify(revision),
+    })
+  }
+
+  approveCaseMap(publicId: string): Promise<CaseMapDetail> {
+    return request(`/api/v1/case-maps/${publicId}/approve`, { method: 'POST' })
+  }
+
+  submitFeedback(input: FeedbackSubmission): Promise<PractitionerFeedback> {
+    return request('/api/v1/feedback', { method: 'POST', body: JSON.stringify(input) })
+  }
+
+  listFeedback(): Promise<PractitionerFeedback[]> {
+    return request('/api/v1/feedback')
   }
 }
 

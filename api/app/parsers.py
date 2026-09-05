@@ -13,6 +13,19 @@ CITATION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 PINPOINT_PATTERN = re.compile(r"(?:at\s*)?\[(?P<pin>\d+(?:[-–]\d+)?)\]", re.IGNORECASE)
+MALFORMED_CITATION_PATTERN = re.compile(r"\[?\d{4}\]?\s+SG(?:CA|HC|HC\(A\)|SICC)\b", re.IGNORECASE)
+CASE_NAME_PATTERN = re.compile(r"(?P<name>[A-Z][A-Za-z0-9&().,' -]{2,80}\sv\s[A-Z][A-Za-z0-9&().,' -]{2,80})")
+
+
+def modality_for(text: str) -> str:
+    lowered = text.lower()
+    if any(term in lowered for term in ("must", "always", "automatically", "never")):
+        return "mandatory"
+    if any(term in lowered for term in ("generally", "usually", "subject to", "unless")):
+        return "qualified"
+    if any(term in lowered for term in ("may", "can", "suggests", "could")):
+        return "permissive"
+    return "descriptive"
 
 
 def normalise_citation(value: str) -> str:
@@ -47,6 +60,7 @@ class LocalClaimParser:
         for order, sentence in enumerate(self._sentences(text), start=1):
             citation_match = CITATION_PATTERN.search(sentence)
             citation = canonical_citation(citation_match.group(0)) if citation_match else None
+            malformed = bool(not citation_match and MALFORMED_CITATION_PATTERN.search(sentence))
             pinpoint = None
             if citation_match:
                 tail = sentence[citation_match.end() :]
@@ -57,6 +71,7 @@ class LocalClaimParser:
             terms = [term for term in OVERGENERALISATION_TERMS if term in lowered]
             if re.search(r"\ball\b.{0,60}\bnon-competes?\b", lowered) and "all non-competes" not in terms:
                 terms.append("all non-competes")
+            name_match = CASE_NAME_PATTERN.search(sentence[: citation_match.start()] if citation_match else sentence)
             claims.append(
                 ParsedClaim(
                     order=order,
@@ -67,6 +82,9 @@ class LocalClaimParser:
                     parser_confidence=confidence,
                     parser_used="local",
                     overgeneralisation_terms=terms,
+                    case_name_mention=name_match.group("name").strip() if name_match else None,
+                    citation_parse_status="valid" if citation else "malformed" if malformed else "unresolved",
+                    modality=modality_for(sentence),
                 )
             )
         return claims
@@ -90,7 +108,7 @@ class GeminiClaimParser:
             http_options=types.HttpOptions(timeout=int(self.settings.gemini_timeout_seconds * 1000)),
         )
         response = client.models.generate_content(
-            model=self.settings.gemini_model,
+            model=self.settings.claim_model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -107,6 +125,7 @@ class GeminiClaimParser:
                 raise ValueError("Gemini returned a proposition outside the controlled taxonomy")
             payload = item.model_dump()
             payload["citation"] = canonical_citation(item.citation) if item.citation else None
+            payload["citation_parse_status"] = "valid" if payload["citation"] else "unresolved"
             claims.append(
                 ParsedClaim(
                     **payload,

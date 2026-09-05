@@ -1,4 +1,4 @@
-# ProofMark: Automated Official-Judgment Corpus Refresh
+# ProofMark: Automated Official-Judgment Corpus Refresh, Freshness, and Re-audit
 
 ## Summary
 
@@ -10,10 +10,33 @@ The MVP will:
 - Fetch, hash, paragraph-split, and AI-annotate those judgments automatically.
 - Build an immutable active corpus snapshot used for instant audit-time citation and context checking.
 - Display two separate facts for positive evidence: **Officially sourced** and **AI-supported**.
-- Reserve the existing four cases for the hand-labelled benchmark gold set only.
+- Reserve the existing six cases for the hand-labelled benchmark gold set only.
 - Treat SAL/SLR/LawNet as a future licensed-source connector; do not scrape or ingest its content now.
 
 The system will never let AI-created annotations alone produce the existing `verified` verdict. Machine-discovered evidence can support `context_review`; fake-citation, unsupported, unverified, and out-of-scope rules remain deterministic.
+
+## Implemented operational update
+
+The refresh pipeline below is implemented together with these operational safeguards.
+
+- A local, in-process scheduler starts with FastAPI and runs the capped SG Courts refresh every 24 hours by default. PROOFMARK_REFRESH_INTERVAL_HOURS controls the interval; zero disables it. It waits one interval after application startup, so the refresh CLI and dashboard button remain the immediate pre-pitch options.
+- GET /api/v1/corpora/freshness exposes active corpus version, sources-current-as-of timestamp, cached-snapshot state, scheduler status, and latest refresh metadata. Refresh work remains outside normal audit requests.
+- Each completed audit stores its immutable corpus version, source timestamp, engine/parser/taxonomy versions, approved currency-register version, and cache outcome.
+- Cache reuse requires an exact hash of answer, original question, facts, audit mode, corpus version, engine version, parser version, taxonomy version, and approved currency-register version. A hit becomes a new traceable audit record; user answers are never legal authority, model-training material, or semantic memory.
+- An audit is stale when its corpus version or approved organisation-specific currency register differs from the current review context. POST /api/v1/audits/{public_id}/re-audit produces a new linked audit; history is never overwritten.
+- Raw answer text is retained for 30 days by default. Expired rows are excluded from retrieval and cache reuse, and an audit owner can delete a saved audit early through DELETE /api/v1/audits/{public_id}. A durable physical-purge worker remains a production requirement before real client material is processed.
+- Reviewer/owner-only legal currency records cover later treatment, statutory amendments, and supersession. Gemini cannot create them. Approved negative treatment produces a visible currency signal and lawyer-review flag, and any register change invalidates cached results.
+- The migration for audit freshness/cache/retention and legal currency records is in the repository but has not been applied to the hosted Supabase project. Connected-mode persistence needs it deployed after review.
+
+### Implemented API, dashboard, and database behaviour
+
+- Refresh runs only from the scheduler, CLI, or refresh action. An audit never starts a crawl, source fetch, or model call.
+- Historical audit output is preserved exactly as run. Staleness is calculated at read time against the active corpus and approved currency register, then the dashboard offers Re-audit latest instead of rewriting prior verdicts.
+- The audit report shows cache state, source timestamp, currency-register version, a precise stale-result banner, and the re-audit action.
+- Audit cache, retention, and re-audit lineage are persisted with parser version, cache key/status, source timestamp, currency-register version, retention expiry, and parent audit reference.
+- Legal currency records use explicit grants and RLS: members can read their organisation records, browser clients cannot write them, and FastAPI validates reviewer/owner membership before server-side persistence.
+- Tests cover cache misses for changed source/context/version/review state, distinct public IDs for cache hits, stale/re-audit behaviour, retention-aware lookup, and blocked browser writes to legal currency records.
+- The benchmark now has six gold fixtures. The two newer extracts remain subject to legal-team verification before presentation.
 
 ## Implementation Changes
 
@@ -66,7 +89,7 @@ The system will never let AI-created annotations alone produce the existing `ver
 
 - On `/authorities`, add an **AI refresh from SG Courts** action, progress state, active-snapshot timestamp, 25-document cap, fallback banner, and source/annotation badges on every passage.
 - On `/audits/:id`, show separate evidence badges: **Official SG Courts source** and **AI-supported proposition**. Show `context_review` for all machine-discovered positive evidence and explain that legal review remains required.
-- On `/benchmark`, preserve the four-case gold fixture pack as a separate controlled correctness test. Add:
+- On `/benchmark`, preserve the six-case gold fixture pack as a separate controlled correctness test. Add:
   - source-provenance rate;
   - citation-heading match rate;
   - annotation disagreement rate;
@@ -90,5 +113,5 @@ The system will never let AI-created annotations alone produce the existing `ver
 - Gemini API access is available through `GEMINI_API_KEY`.
 - The live source is limited to SG Courts/eLitigation official judgment pages and a maximum of 25 judgments per refresh.
 - A successful automated refresh is run once before the pitch to create the frozen snapshot; presentation mode uses live refresh when available and cached snapshot fallback when not.
-- The four existing selected cases become benchmark gold fixtures only; they are not the active automated runtime corpus.
+- The six selected cases become benchmark gold fixtures only; they are not the active automated runtime corpus. The two newer extracts remain subject to legal-team verification before presentation.
 - Licensed SAL/SLR/LawNet material is future architecture only and is never scraped, copied, or indexed in the hackathon MVP.

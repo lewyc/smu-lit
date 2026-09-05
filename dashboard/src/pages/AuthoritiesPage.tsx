@@ -2,7 +2,7 @@ import { ExternalLink, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorPanel, LoadingPanel, PageHeader } from '../components/Common'
 import { auditRepository } from '../lib/repository'
-import type { Authority, CorpusMetadata, RefreshRun } from '../types'
+import type { Authority, CaseMapDetail, CorpusMetadata, RefreshRun } from '../types'
 
 function sourceBadge(authority: Authority, label: string) {
   const official = authority.source_provenance === 'officially_sourced'
@@ -13,20 +13,23 @@ export function AuthoritiesPage() {
   const [authorities, setAuthorities] = useState<Authority[]>([])
   const [corpus, setCorpus] = useState<CorpusMetadata | null>(null)
   const [refresh, setRefresh] = useState<RefreshRun | null>(null)
+  const [caseMaps, setCaseMaps] = useState<CaseMapDetail[]>([])
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const pollRef = useRef<number | null>(null)
 
   async function load() {
-    const [nextCorpus, nextAuthorities, latest] = await Promise.all([
+    const [nextCorpus, nextAuthorities, latest, nextMaps] = await Promise.all([
       auditRepository.getCorpus(),
       auditRepository.listAuthorities(),
       auditRepository.getLatestCorpusRefresh(),
+      auditRepository.listCaseMaps(),
     ])
     setCorpus(nextCorpus)
     setAuthorities(nextAuthorities)
     setRefresh(latest)
+    setCaseMaps(nextMaps)
   }
 
   useEffect(() => {
@@ -117,6 +120,9 @@ export function AuthoritiesPage() {
                   <div className="source-badge-row">
                     {sourceBadge(authority, authority.source_provenance === 'officially_sourced' ? 'Official SG Courts source' : 'Benchmark gold fixture')}
                     {authority.assessment_status === 'ai_supported' && <span className="source-badge ai">AI annotation retained</span>}
+                    <span className="source-badge muted">{authority.court_code ?? 'court unknown'} · tier {authority.court_tier ?? 'unrated'}</span>
+                    <span className="source-badge warning">precedent: {authority.hierarchy_reviewed ? authority.precedential_status : 'awaiting legal review'}</span>
+                    <span className="source-badge ai">Case Map: {caseMaps.find((item) => item.citation_key === authority.citation_key && item.status !== 'superseded')?.status ?? 'not generated'}</span>
                   </div>
                 </div>
                 <a href={authority.official_url} target="_blank" rel="noreferrer">Official source <ExternalLink size={13} /></a>

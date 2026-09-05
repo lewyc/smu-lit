@@ -147,6 +147,54 @@ AUTHORITIES = [
             ),
         ],
     ),
+    Authority(
+        id="smile-inc-2012",
+        citation="[2012] SGCA 39",
+        citation_key="2012SGCA39",
+        case_name="Smile Inc Dental Surgeons Pte Ltd v Lui Andrew Stewart",
+        court="Court of Appeal",
+        decision_date="2012-07-30",
+        official_url="https://www.elitigation.sg/gd/s/2012_SGCA_39",
+        source_status="gold_fixture",
+        source_provenance="gold_fixture",
+        assessment_status="gold_fixture",
+        passages=[
+            Passage(
+                id="smile-29",
+                paragraph_label="[29]",
+                text=(
+                    "Severance cannot be used to rewrite a covenant; the blue-pencil approach "
+                    "operates only where the remaining words retain their grammatical meaning."
+                ),
+                supported_propositions=["severance_blue_pencil"],
+                limitations=["Gold-fixture paraphrase must be checked by the legal team against the linked judgment before presentation."],
+            )
+        ],
+    ),
+    Authority(
+        id="moneysmart-2024",
+        citation="[2024] SGHC 94",
+        citation_key="2024SGHC94",
+        case_name="MoneySmart Singapore Pte Ltd v Artem Musienko",
+        court="High Court",
+        decision_date="2024-04-05",
+        official_url="https://www.elitigation.sg/gd/s/2024_SGHC_94",
+        source_status="gold_fixture",
+        source_provenance="gold_fixture",
+        assessment_status="gold_fixture",
+        passages=[
+            Passage(
+                id="moneysmart-42",
+                paragraph_label="[42]",
+                text=(
+                    "The restraint was assessed by reference to its non-competition, non-solicitation "
+                    "and non-dealing effects and the interests said to justify them."
+                ),
+                supported_propositions=["non_solicitation_non_dealing", "activity_scope"],
+                limitations=["Gold-fixture paraphrase must be checked by the legal team against the linked judgment before presentation."],
+            )
+        ],
+    ),
 ]
 
 NEGATIVE_CITATION_CHECKS = {

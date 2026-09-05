@@ -123,13 +123,25 @@ create table public.audit_runs (
   organisation_id bigint not null references public.organisations(id) on delete restrict,
   created_by uuid not null references auth.users(id) on delete restrict,
   input_text text not null check (char_length(input_text) between 1 and 20000),
+  audit_mode text not null default 'citation_only' check (audit_mode in ('citation_only', 'full')),
+  original_question text check (original_question is null or char_length(original_question) <= 5000),
+  facts text check (facts is null or char_length(facts) <= 10000),
   status text not null check (status in ('queued', 'running', 'complete', 'failed')),
   corpus_version text not null,
   engine_version text not null,
   parser_mode text not null check (parser_mode in ('local', 'gemini')),
+  parser_version text not null default 'local-claims.1',
+  audit_cache_key text,
+  cache_status text not null default 'miss' check (cache_status in ('hit', 'miss', 'bypassed')),
+  source_checked_at timestamptz,
+  currency_registry_version text not null default 'currency-none',
+  retention_expires_at timestamptz not null default (now() + interval '30 days'),
+  re_audited_from_id bigint references public.audit_runs(id) on delete set null,
   processing_duration_ms numeric(12, 3) check (processing_duration_ms >= 0),
   summary_metrics jsonb not null default '{}'::jsonb,
   summary_counts jsonb not null default '{}'::jsonb,
+  module_scores jsonb not null default '{}'::jsonb,
+  evaluation_provenance jsonb not null default '{}'::jsonb,
   result_payload jsonb,
   failure_code text,
   created_at timestamptz not null default now(),
@@ -206,6 +218,170 @@ create table public.benchmark_runs (
   created_at timestamptz not null default now()
 );
 
+create table public.source_imports (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  imported_by uuid not null references auth.users(id) on delete restrict,
+  filename text not null,
+  expected_citation text not null,
+  normalised_citation_key text not null,
+  stated_official_url text check (stated_official_url is null or stated_official_url like 'https://%'),
+  document_hash text not null check (length(document_hash) = 64),
+  source_provenance text not null default 'user_supplied' check (source_provenance = 'user_supplied'),
+  extracted_paragraphs jsonb not null default '[]'::jsonb,
+  warnings text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  unique (organisation_id, document_hash)
+);
+
+create table public.case_map_runs (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  authority_id bigint references public.authorities(id) on delete restrict,
+  source_import_id bigint references public.source_imports(id) on delete restrict,
+  created_by uuid not null references auth.users(id) on delete restrict,
+  normalised_citation_key text not null,
+  document_hash text not null check (length(document_hash) = 64),
+  schema_version text not null,
+  map_version bigint not null default 1 check (map_version > 0),
+  model_version text not null,
+  prompt_version text not null,
+  annotator_version text not null,
+  extractor_version text,
+  status text not null check (status in ('queued', 'running', 'draft', 'approved', 'rejected', 'stale', 'failed')),
+  validation_errors jsonb not null default '[]'::jsonb,
+  processing_duration_ms numeric(12, 3) check (processing_duration_ms is null or processing_duration_ms >= 0),
+  reviewed_by uuid references auth.users(id) on delete restrict,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check ((authority_id is not null)::int + (source_import_id is not null)::int = 1),
+  unique (organisation_id, normalised_citation_key, document_hash, schema_version, map_version)
+);
+
+create table public.case_map_annotations (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  case_map_run_id bigint not null references public.case_map_runs(id) on delete restrict,
+  annotation_type text not null check (annotation_type in (
+    'ratio_candidate', 'holding', 'obiter_candidate', 'party_submission',
+    'factual_finding', 'procedural_history', 'disposition'
+  )),
+  proposition_code text,
+  statement text not null,
+  paragraph_labels text[] not null check (cardinality(paragraph_labels) > 0),
+  supporting_quote text not null check (char_length(supporting_quote) between 1 and 800),
+  modality text not null check (modality in ('mandatory', 'qualified', 'permissive', 'descriptive')),
+  limitations text[] not null default '{}',
+  applicability_factors text[] not null default '{}',
+  model_confidence numeric(4, 3) not null check (model_confidence between 0 and 1),
+  validation_status text not null check (validation_status in ('valid', 'warning', 'invalid')),
+  validation_messages text[] not null default '{}',
+  review_status text not null default 'draft' check (review_status in ('draft', 'approved', 'rejected', 'superseded')),
+  created_at timestamptz not null default now()
+);
+
+create table public.case_map_review_events (
+  id bigint generated always as identity primary key,
+  case_map_run_id bigint not null references public.case_map_runs(id) on delete restrict,
+  annotation_id bigint references public.case_map_annotations(id) on delete restrict,
+  actor_id uuid references auth.users(id) on delete restrict,
+  event_type text not null check (event_type in ('edit', 'approve', 'reject', 'supersede', 'feedback_accepted')),
+  previous_value jsonb,
+  new_value jsonb,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create table public.authority_assessments (
+  id bigint generated always as identity primary key,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  authority_id bigint not null references public.authorities(id) on delete restrict,
+  jurisdiction text not null,
+  court_code text not null,
+  court_tier bigint not null check (court_tier > 0),
+  target_forum text not null default 'Singapore',
+  precedential_status text not null check (precedential_status in ('binding', 'persuasive', 'secondary', 'unknown')),
+  currency_status text not null default 'not_verified' check (currency_status in ('current_reviewed', 'negative_treatment', 'not_verified')),
+  reviewed_by uuid references auth.users(id) on delete restrict,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (organisation_id, authority_id, target_forum)
+);
+
+create table public.authority_relationships (
+  id bigint generated always as identity primary key,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  source_authority_id bigint not null references public.authorities(id) on delete restrict,
+  target_authority_id bigint not null references public.authorities(id) on delete restrict,
+  treatment text not null check (treatment in ('follows', 'applies', 'distinguishes', 'limits', 'criticises', 'overrules', 'cites')),
+  paragraph_labels text[] not null check (cardinality(paragraph_labels) > 0),
+  source_document_hash text not null check (length(source_document_hash) = 64),
+  review_status text not null default 'draft' check (review_status in ('draft', 'approved', 'rejected', 'superseded')),
+  reviewed_by uuid references auth.users(id) on delete restrict,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (organisation_id, source_authority_id, target_authority_id, treatment, source_document_hash)
+);
+
+create table public.legal_currency_records (
+  id bigint generated always as identity primary key,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  authority_id bigint not null references public.authorities(id) on delete restrict,
+  record_type text not null check (record_type in ('later_treatment', 'statutory_amendment', 'supersession')),
+  treatment text not null check (treatment in ('follows', 'distinguishes', 'limits', 'overrules', 'supersedes', 'amends')),
+  source_authority_id bigint references public.authorities(id) on delete restrict,
+  statute_reference text,
+  effective_date date,
+  note text,
+  review_status text not null default 'draft' check (review_status in ('draft', 'approved', 'rejected', 'superseded')),
+  reviewed_by uuid references auth.users(id) on delete restrict,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  check (
+    (record_type = 'statutory_amendment' and statute_reference is not null)
+    or (record_type <> 'statutory_amendment' and source_authority_id is not null)
+  )
+);
+
+create table public.practitioner_feedback (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  audit_claim_id bigint not null references public.audit_claims(id) on delete restrict,
+  submitted_by uuid not null references auth.users(id) on delete restrict,
+  category text not null check (category in (
+    'wrong_verdict', 'wrong_proposition', 'wrong_pinpoint', 'incorrect_case_map_role',
+    'missing_authority', 'missing_context', 'outdated_authority', 'other'
+  )),
+  explanation text not null,
+  proposed_citation text,
+  proposed_paragraph text,
+  proposed_correction text,
+  status text not null default 'under_review' check (status in ('submitted', 'under_review', 'accepted', 'rejected')),
+  resolution_note text,
+  resolved_by uuid references auth.users(id) on delete restrict,
+  resolved_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table public.reference_sources (
+  id bigint generated always as identity primary key,
+  public_id uuid not null default gen_random_uuid() unique,
+  organisation_id bigint not null references public.organisations(id) on delete restrict,
+  source_type text not null check (source_type in ('licensed_metadata', 'journal', 'textbook', 'commentary', 'other_secondary')),
+  title text not null,
+  author text,
+  publication text,
+  publication_year bigint check (publication_year between 1800 and 2200),
+  source_url text check (source_url is null or source_url like 'https://%'),
+  verification_status text not null default 'unverified' check (verification_status in ('verified_metadata', 'unverified', 'rejected')),
+  created_by uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now()
+);
+
 create index organisation_members_user_id_idx on public.organisation_members (user_id);
 create index organisation_members_organisation_id_idx on public.organisation_members (organisation_id);
 create index authorities_corpus_id_idx on public.authorities (corpus_id);
@@ -222,6 +398,13 @@ create index audit_runs_created_by_idx on public.audit_runs (created_by);
 create index audit_runs_org_created_idx on public.audit_runs (organisation_id, created_at desc);
 create index audit_runs_active_idx on public.audit_runs (created_at)
   where status in ('queued', 'running');
+create index audit_runs_cache_lookup_idx
+  on public.audit_runs (organisation_id, audit_cache_key, created_at desc)
+  where status = 'complete' and audit_cache_key is not null;
+create index audit_runs_retention_expiry_idx on public.audit_runs (retention_expires_at)
+  where retention_expires_at is not null;
+create index audit_runs_re_audited_from_id_idx on public.audit_runs (re_audited_from_id)
+  where re_audited_from_id is not null;
 create index audit_claims_run_order_idx on public.audit_claims (audit_run_id, claim_order);
 create index claim_evidence_claim_idx on public.claim_evidence (audit_claim_id);
 create index claim_evidence_passage_idx on public.claim_evidence (passage_external_id);
@@ -230,3 +413,37 @@ create index handoff_briefs_reviewed_by_idx on public.handoff_briefs (reviewed_b
 create index audit_events_run_created_idx on public.audit_events (audit_run_id, created_at);
 create index benchmark_runs_created_by_idx on public.benchmark_runs (created_by);
 create index benchmark_runs_org_created_idx on public.benchmark_runs (organisation_id, created_at desc);
+create index source_imports_org_created_idx on public.source_imports (organisation_id, created_at desc);
+create index source_imports_imported_by_idx on public.source_imports (imported_by);
+create index source_imports_citation_hash_idx on public.source_imports (normalised_citation_key, document_hash);
+create index case_map_runs_org_status_created_idx on public.case_map_runs (organisation_id, status, created_at desc);
+create index case_map_runs_authority_id_idx on public.case_map_runs (authority_id) where authority_id is not null;
+create index case_map_runs_source_import_id_idx on public.case_map_runs (source_import_id) where source_import_id is not null;
+create index case_map_runs_created_by_idx on public.case_map_runs (created_by);
+create index case_map_runs_reviewed_by_idx on public.case_map_runs (reviewed_by) where reviewed_by is not null;
+create index case_map_runs_hash_idx on public.case_map_runs (document_hash, schema_version);
+create index case_map_annotations_run_idx on public.case_map_annotations (case_map_run_id, review_status);
+create index case_map_review_events_run_created_idx on public.case_map_review_events (case_map_run_id, created_at);
+create index case_map_review_events_annotation_idx on public.case_map_review_events (annotation_id) where annotation_id is not null;
+create index case_map_review_events_actor_idx on public.case_map_review_events (actor_id) where actor_id is not null;
+create index authority_assessments_org_idx on public.authority_assessments (organisation_id, precedential_status);
+create index authority_assessments_authority_idx on public.authority_assessments (authority_id);
+create index authority_assessments_reviewer_idx on public.authority_assessments (reviewed_by) where reviewed_by is not null;
+create index authority_relationships_org_status_idx on public.authority_relationships (organisation_id, review_status);
+create index authority_relationships_source_idx on public.authority_relationships (source_authority_id);
+create index authority_relationships_target_idx on public.authority_relationships (target_authority_id);
+create index authority_relationships_reviewer_idx on public.authority_relationships (reviewed_by) where reviewed_by is not null;
+create index legal_currency_records_org_authority_status_idx
+  on public.legal_currency_records (organisation_id, authority_id, review_status);
+create index legal_currency_records_source_authority_idx
+  on public.legal_currency_records (source_authority_id)
+  where source_authority_id is not null;
+create index legal_currency_records_reviewed_by_idx
+  on public.legal_currency_records (reviewed_by)
+  where reviewed_by is not null;
+create index practitioner_feedback_org_status_created_idx on public.practitioner_feedback (organisation_id, status, created_at desc);
+create index practitioner_feedback_claim_idx on public.practitioner_feedback (audit_claim_id);
+create index practitioner_feedback_submitted_by_idx on public.practitioner_feedback (submitted_by);
+create index practitioner_feedback_resolved_by_idx on public.practitioner_feedback (resolved_by) where resolved_by is not null;
+create index reference_sources_org_created_idx on public.reference_sources (organisation_id, created_at desc);
+create index reference_sources_created_by_idx on public.reference_sources (created_by);

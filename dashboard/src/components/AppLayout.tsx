@@ -3,6 +3,7 @@ import {
   BookOpenText,
   FileCheck2,
   Menu,
+  Network,
   Plus,
   Scale,
   ShieldCheck,
@@ -16,6 +17,7 @@ const navigation = [
   { to: '/audits', label: 'Audit worklist', icon: FileCheck2 },
   { to: '/audits/new', label: 'New audit', icon: Plus },
   { to: '/authorities', label: 'Authorities', icon: BookOpenText },
+  { to: '/case-maps', label: 'Case Maps', icon: Network },
   { to: '/benchmark', label: 'Benchmark', icon: BarChart3 },
   { to: '/assurance', label: 'Assurance', icon: ShieldCheck },
 ]

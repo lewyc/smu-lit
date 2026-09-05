@@ -8,9 +8,14 @@ const current = [
   'Synchronous local FastAPI engine',
   'Immutable official-judgment snapshot with cached fallback',
   'Exact neutral-citation resolution',
-  'TF-IDF passage navigation',
-  'Optional Gemini claim structuring',
+  'Exact-pincite and citation-identity checks',
+  'Gemini Case Map drafts with exact paragraph anchors',
+  'Lawyer editing, approval and immutable review history',
+  'Full-mode context, modality, omission and balance checks',
+  'Controlled practitioner feedback without self-training',
   'Supabase Auth, RLS, and durable audit records',
+  'Source-versioned cache, stale-report warning, and linked re-audit',
+  'Reviewer-only treatment, supersession, and amendment register',
 ]
 
 const future = [
@@ -55,12 +60,24 @@ export function AssurancePage() {
           <div><strong>Jurisdiction</strong><span>Singapore</span></div>
           <div><strong>Practice area</strong><span>Employment restraints of trade</span></div>
           <div><strong>Corpus</strong><span>{corpus ? corpus.authority_count + ' official judgments · ' + corpus.passage_count + ' passages' : 'Awaiting first official snapshot'}</span></div>
+          <div><strong>Sources current as of</strong><span>{corpus?.snapshot_created_at ? new Date(corpus.snapshot_created_at).toLocaleString() : 'Awaiting first successful refresh'}</span></div>
           <div><strong>Outcome</strong><span>Evaluation and lawyer handoff</span></div>
         </div>
         <p>Absence from this corpus is never treated as proof that an authority does not exist. “Likely fabricated” requires a separately recorded negative official-registry check.</p>
       </div>
       <div className="corpus-notice">
         <strong>Licensed materials: future integration only.</strong> ProofMark does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
+      </div>
+      <div className="panel boundary-panel">
+        <p className="eyebrow">Who audits the auditor?</p>
+        <h2>Three independent trust hierarchies</h2>
+        <div className="boundary-grid">
+          <div><strong>Pipeline</strong><span>Official refresh → Case Map draft → lawyer approval → deterministic audit</span></div>
+          <div><strong>Decision authority</strong><span>Source checks → gold labels → approved maps → AI labels → lexical rank</span></div>
+          <div><strong>Source hierarchy</strong><span>Official law → licensed metadata → recognised commentary → user supplied</span></div>
+          <div><strong>Court hierarchy</strong><span>Forum-aware court tier, reviewed binding status, foreign law as persuasive only</span></div>
+        </div>
+        <p>Approval means fit for evaluation assistance, not guaranteed legal truth. Runtime Case Maps remain capped at context review; only the separated benchmark can display verified.</p>
       </div>
       <div className="architecture-grid">
         <div className="panel architecture-column">

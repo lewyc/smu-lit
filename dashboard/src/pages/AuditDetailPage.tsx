@@ -1,6 +1,6 @@
-import { ArrowLeft, ExternalLink, FileText, Scale, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FileText, Flag, RefreshCw, Scale, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ErrorPanel, LoadingPanel, PageHeader, VerdictBadge } from '../components/Common'
 import { auditRepository } from '../lib/repository'
@@ -8,8 +8,15 @@ import type { AuditDetail } from '../types'
 
 export function AuditDetailPage() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const [audit, setAudit] = useState<AuditDetail | null>(null)
   const [error, setError] = useState('')
+  const [reAuditing, setReAuditing] = useState(false)
+  const [reAuditError, setReAuditError] = useState('')
+  const [feedbackClaim, setFeedbackClaim] = useState<number | null>(null)
+  const [feedbackCategory, setFeedbackCategory] = useState<'wrong_verdict' | 'wrong_proposition' | 'wrong_pinpoint' | 'incorrect_case_map_role' | 'missing_authority' | 'missing_context' | 'outdated_authority' | 'other'>('wrong_verdict')
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackMessage, setFeedbackMessage] = useState('')
 
   useEffect(() => {
     auditRepository.getAudit(id).then(setAudit).catch((value: Error) => setError(value.message))
@@ -23,6 +30,45 @@ export function AuditDetailPage() {
     { name: 'Grounded coverage', value: audit.metrics.grounded_coverage },
     { name: 'Contextual support', value: audit.metrics.contextual_support },
   ]
+  const modules = [
+    ['Citation integrity', audit.metrics.citation_integrity_module],
+    ['Propositional accuracy', audit.metrics.propositional_accuracy_module],
+    ['Relevance / currency', audit.metrics.relevance_currency_module],
+    ['Balance / completeness', audit.metrics.balance_completeness_module],
+  ] as const
+
+  async function submitFeedback(claimOrder: number) {
+    if (!feedbackText.trim()) return setFeedbackMessage('Explain what appears inaccurate.')
+    try {
+      await auditRepository.submitFeedback({ audit_public_id: audit!.public_id, claim_order: claimOrder, category: feedbackCategory, explanation: feedbackText })
+      setAudit({ ...audit!, claims: audit!.claims.map((claim) => claim.order === claimOrder ? { ...claim, pending_feedback: true } : claim) })
+      setFeedbackMessage('Flag submitted for controlled practitioner review. The verdict and score have not changed.')
+      setFeedbackText('')
+    } catch (value) { setFeedbackMessage(value instanceof Error ? value.message : 'Feedback could not be submitted.') }
+  }
+
+  async function reAuditUnderLatestCorpus() {
+    setReAuditing(true)
+    setReAuditError('')
+    try {
+      const refreshed = await auditRepository.reAudit(audit!.public_id)
+      setAudit(refreshed)
+      navigate('/audits/' + refreshed.public_id, { replace: true })
+    } catch (value) {
+      setReAuditError(value instanceof Error ? value.message : 'The audit could not be re-run.')
+    } finally {
+      setReAuditing(false)
+    }
+  }
+
+  const sourceTimestamp = audit.sources_current_as_of ?? audit.source_checked_at
+  const sourceDate = sourceTimestamp ? new Date(sourceTimestamp).toLocaleString() : 'not available'
+  const corpusIsStale = audit.corpus_version !== audit.active_corpus_version
+  const currencyIsStale = audit.currency_registry_version !== audit.active_currency_registry_version
+  const staleTitle = corpusIsStale ? 'A newer source snapshot is active' : 'The reviewed currency register has changed'
+  const staleMessage = corpusIsStale
+    ? 'This report used ' + audit.corpus_version + '. The active snapshot is ' + (audit.active_corpus_version ?? 'newer') + ' and sources are current as of ' + sourceDate + '.'
+    : 'A lawyer-approved treatment, supersession, or amendment record changed after this report was created.'
 
   return (
     <section className="page">
@@ -30,8 +76,17 @@ export function AuditDetailPage() {
       <PageHeader
         eyebrow="Completed audit"
         title="Evidence-linked assurance report"
-        description={`${audit.claims.length} claims · ${audit.processing_duration_ms} ms · ${audit.parser_used} parser`}
-        action={<span className={audit.is_saved_demo ? 'source-stamp demo' : 'source-stamp'}>{audit.source_label}</span>}
+        description={`${audit.claims.length} claims · ${audit.processing_duration_ms} ms · ${audit.parser_used} parser · ${audit.audit_mode === 'full' ? 'full contextual audit' : 'citation-only audit'}`}
+        action={
+          <div className="audit-header-actions">
+            <span className={audit.is_saved_demo ? 'source-stamp demo' : 'source-stamp'}>{audit.source_label}</span>
+            {!audit.is_saved_demo && (
+              <button className="button secondary compact" type="button" disabled={reAuditing} onClick={reAuditUnderLatestCorpus}>
+                <RefreshCw className={reAuditing ? 'spin' : ''} size={14} />{reAuditing ? 'Re-auditing…' : 'Re-audit latest'}
+              </button>
+            )}
+          </div>
+        }
       />
       {audit.is_saved_demo && (
         <div className="offline-banner">
@@ -39,6 +94,16 @@ export function AuditDetailPage() {
           <div><strong>Saved demonstration result</strong><p>The API was unavailable. This is a bundled, pre-computed example—not a newly run audit.</p></div>
         </div>
       )}
+      {audit.is_stale && (
+        <div className="freshness-banner" role="status">
+          <TriangleAlert size={18} />
+          <div>
+            <strong>{staleTitle}</strong>
+            <p>{staleMessage} {currencyIsStale && corpusIsStale ? 'The reviewed currency register also changed. ' : ''}Re-audit to create a separate, traceable report under the latest review context.</p>
+          </div>
+        </div>
+      )}
+      {reAuditError && <ErrorPanel message={reAuditError} />}
       <div className="detail-top-grid">
         <div className="panel metric-chart">
           <div><p className="eyebrow">Transparent metrics</p><h2>Audit posture</h2></div>
@@ -65,10 +130,30 @@ export function AuditDetailPage() {
             <div><dt>Taxonomy</dt><dd>{audit.taxonomy_version}</dd></div>
             <div><dt>Parser requested</dt><dd>{audit.parser_requested}</dd></div>
             <div><dt>Parser used</dt><dd>{audit.parser_used}</dd></div>
+            <div><dt>Parser version</dt><dd>{audit.parser_version}</dd></div>
+            <div><dt>Result cache</dt><dd>{audit.cache_status === 'hit' ? 'Source-versioned cache hit' : audit.cache_status === 'bypassed' ? 'Bypassed for a fresh run' : 'Freshly evaluated'}</dd></div>
+            <div><dt>Sources current as of</dt><dd>{sourceDate}</dd></div>
+            <div><dt>Currency register</dt><dd>{audit.currency_registry_version ?? 'legacy audit · not captured'}</dd></div>
           </dl>
           {audit.parser_fallback_reason && <div className="fallback-note">{audit.parser_fallback_reason}</div>}
         </div>
       </div>
+
+      <section className="module-score-grid" aria-label="Framework module scores">
+        {modules.map(([label, module]) => (
+          <div className="panel module-score" key={label}>
+            <p className="eyebrow">{module?.weight ?? 0}% framework weight</p>
+            <h3>{label}</h3>
+            <strong>{module?.assessed ? `${module.score}%` : 'Not assessed'}</strong>
+            {!module?.assessed && <small>{module?.reason_not_assessed ?? 'This dimension was unavailable.'}</small>}
+          </div>
+        ))}
+        {audit.audit_mode === 'full' && <div className="overall-score"><span>Overall score</span><strong>{audit.metrics.overall_score == null ? 'Withheld' : `${audit.metrics.overall_score}%`}</strong><small>Shown only when every weighted module was assessed.</small></div>}
+      </section>
+
+      {(audit.flags?.length ?? 0) > 0 && (
+        <section className="panel framework-flags"><p className="eyebrow">Context, omissions and balance</p><h2>Lawyer review prompts</h2>{audit.flags!.map((flag, index) => <div key={`${flag.code}-${index}`}><span className={`status-pill ${flag.severity}`}>{flag.severity}</span><p><strong>{flag.code.replaceAll('_', ' ')}</strong> · {flag.message}</p></div>)}</section>
+      )}
 
       <div className="report-grid">
         <aside className="claim-rail panel">
@@ -91,6 +176,10 @@ export function AuditDetailPage() {
                 <span><strong>Proposition</strong>{claim.proposition.replaceAll('_', ' ')}</span>
                 <span><strong>Citation</strong>{claim.citation ?? 'No citation supplied'} {claim.pinpoint ?? ''}</span>
                 <span><strong>Parser confidence</strong>{Math.round(claim.parser_confidence * 100)}%</span>
+                <span><strong>Language modality</strong>{claim.modality ?? 'not assessed'}</span>
+                <span><strong>Pinpoint</strong>{claim.pinpoint_status?.replaceAll('_', ' ') ?? 'not assessed'}</span>
+                <span><strong>Currency</strong>{claim.currency_status?.replaceAll('_', ' ') ?? 'not verified'}</span>
+                <span><strong>Decision rule</strong>{claim.decision_rule_id ?? 'legacy result'}</span>
               </div>
               <div className="rationale">
                 <Scale size={17} />
@@ -118,6 +207,20 @@ export function AuditDetailPage() {
                   <a href={evidence.official_url} target="_blank" rel="noreferrer">Open official judgment <ExternalLink size={13} /></a>
                 </details>
               ))}
+              <div className="feedback-action">
+                <button className="button secondary" type="button" onClick={() => { setFeedbackClaim(feedbackClaim === claim.order ? null : claim.order); setFeedbackMessage('') }}><Flag size={15} />Flag this evaluation</button>
+                {claim.pending_feedback && <span className="status-pill warning">under review · verdict unchanged</span>}
+              </div>
+              {feedbackClaim === claim.order && (
+                <div className="feedback-form">
+                  <select value={feedbackCategory} onChange={(event) => setFeedbackCategory(event.target.value as typeof feedbackCategory)}>
+                    <option value="wrong_verdict">Wrong verdict</option><option value="wrong_proposition">Wrong proposition</option><option value="wrong_pinpoint">Wrong pinpoint</option><option value="incorrect_case_map_role">Incorrect Case Map role</option><option value="missing_authority">Missing authority</option><option value="missing_context">Missing context</option><option value="outdated_authority">Outdated authority</option><option value="other">Other</option>
+                  </select>
+                  <textarea value={feedbackText} onChange={(event) => setFeedbackText(event.target.value)} placeholder="Explain the inaccuracy and, if possible, identify the correct authority or paragraph." />
+                  <button className="button primary" type="button" onClick={() => submitFeedback(claim.order)}>Submit for review</button>
+                  {feedbackMessage && <small>{feedbackMessage}</small>}
+                </div>
+              )}
             </article>
           ))}
         </div>

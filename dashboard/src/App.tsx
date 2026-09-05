@@ -7,6 +7,7 @@ const AuditDetailPage = lazy(() => import('./pages/AuditDetailPage').then((modul
 const AuditsPage = lazy(() => import('./pages/AuditsPage').then((module) => ({ default: module.AuditsPage })))
 const AuthoritiesPage = lazy(() => import('./pages/AuthoritiesPage').then((module) => ({ default: module.AuthoritiesPage })))
 const BenchmarkPage = lazy(() => import('./pages/BenchmarkPage').then((module) => ({ default: module.BenchmarkPage })))
+const CaseMapsPage = lazy(() => import('./pages/CaseMapsPage').then((module) => ({ default: module.CaseMapsPage })))
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
 const NewAuditPage = lazy(() => import('./pages/NewAuditPage').then((module) => ({ default: module.NewAuditPage })))
 
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/audits/new" element={<NewAuditPage />} />
           <Route path="/audits/:id" element={<AuditDetailPage />} />
           <Route path="/authorities" element={<AuthoritiesPage />} />
+          <Route path="/case-maps" element={<CaseMapsPage />} />
           <Route path="/benchmark" element={<BenchmarkPage />} />
           <Route path="/assurance" element={<AssurancePage />} />
         </Route>

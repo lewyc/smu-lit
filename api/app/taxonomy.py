@@ -1,4 +1,4 @@
-TAXONOMY_VERSION = "sg-rot-taxonomy-1.0"
+TAXONOMY_VERSION = "sg-rot-taxonomy-2.0"
 
 PROPOSITIONS = {
     "prima_facie_unenforceable",
@@ -12,12 +12,20 @@ PROPOSITIONS = {
     "duration_scope",
     "activity_scope",
     "interim_injunction_standard",
+    "severance_blue_pencil",
+    "cascading_restraint",
+    "non_solicitation_non_dealing",
+    "policy_freedom_to_trade",
     "outside_corpus_scope",
 }
 
 PHRASE_MAP: list[tuple[tuple[str, ...], str]] = [
     (("personal data", "pdpa", "privacy", "criminal", "patent", "copyright"), "outside_corpus_scope"),
     (("interim injunction", "serious question to be tried", "balance of convenience"), "interim_injunction_standard"),
+    (("blue pencil", "blue-pencil", "severance", "severable"), "severance_blue_pencil"),
+    (("cascading restraint", "cascading clause"), "cascading_restraint"),
+    (("non-solicitation", "non solicitation", "non-dealing", "non dealing"), "non_solicitation_non_dealing"),
+    (("freedom to trade", "freedom of trade", "unequal bargaining"), "policy_freedom_to_trade"),
     (("confidential information", "trade secret"), "confidential_information"),
     (("customer connection", "customer relationship", "goodwill"), "customer_connections"),
     (("stable trained workforce", "trained workforce", "employee stability"), "stable_trained_workforce"),
