@@ -88,6 +88,16 @@ export interface AuditedClaim {
   case_map_version?: string | null
   case_map_review_status?: 'draft' | 'approved' | 'rejected' | 'superseded' | null
   pending_feedback?: boolean
+  requires_authority?: 'true' | 'false' | 'uncertain'
+  failure_level?: 1 | 2 | 3 | 4 | 5 | null
+  quote_checks?: QuoteCheck[]
+}
+
+export interface QuoteCheck {
+  quote: string
+  status: 'exact_match' | 'normalised_match' | 'not_found' | 'not_assessed'
+  paragraph_label: string | null
+  method: 'exact' | 'whitespace_normalised' | 'none'
 }
 
 export interface ModuleScore {
@@ -152,6 +162,75 @@ export interface AuditDetail extends AuditSummary {
   context_profile?: Record<string, unknown> | null
   flags?: EvaluationFlag[]
   evaluation_provenance?: Record<string, unknown>
+  assurance_policy_version?: string
+  assurance_questions?: AssuranceQuestionResult[]
+  failure_findings?: FailureFinding[]
+  claim_graph?: ClaimGraph | null
+  score_gates?: ScoreGate[]
+  score_cap?: number | null
+  completeness_searches?: CompletenessSearch[]
+}
+
+export interface AssuranceQuestionResult {
+  key: 'existence' | 'fidelity' | 'legal_significance' | 'completeness'
+  question: string
+  status: 'passed' | 'flagged' | 'partial' | 'not_assessed'
+  summary: string
+  finding_count: number
+  failure_levels: number[]
+}
+
+export interface FailureFinding {
+  level: 1 | 2 | 3 | 4 | 5
+  name: string
+  description: string
+  claim_order: number | null
+  decision_rule_id: string | null
+}
+
+export interface ClaimGraphNode {
+  id: string
+  node_type: 'claim' | 'authority'
+  label: string
+  proposition: string | null
+  resolution_status: 'resolved' | 'unresolved' | 'negative_registry_check' | 'not_applicable'
+  requires_authority: 'true' | 'false' | 'uncertain' | null
+}
+
+export interface ClaimAuthorityEdge {
+  claim_id: string
+  authority_id: string
+  relation: 'purports_to_support' | 'supports' | 'unresolved' | 'contradicts'
+  mapping_confidence: number
+}
+
+export interface ClaimGraph {
+  version: string
+  nodes: ClaimGraphNode[]
+  edges: ClaimAuthorityEdge[]
+}
+
+export interface ScoreGate {
+  gate_id: string
+  label: string
+  status: 'passed' | 'triggered' | 'not_assessed'
+  effect: string
+  basis_tier: 'A' | 'B' | 'human_verified_C' | 'none'
+  reason: string
+}
+
+export interface CompletenessSearch {
+  finding: string
+  issue_tag: string
+  corpus_scope: string
+  landmark_set: string[]
+  landmark_set_version: string
+  validation_status: string
+  retrieval_configuration: string
+  independence_attestation: string
+  searched_and_not_found: string[]
+  confidence_band: string
+  measured_accuracy: number | null
 }
 
 export interface EvaluationFlag {
@@ -187,6 +266,17 @@ export interface CaseMapAnnotation {
   validation_status: 'valid' | 'warning' | 'invalid'
   validation_messages: string[]
   review_status: 'draft' | 'approved' | 'rejected' | 'superseded'
+  provenance?: {
+    field: string
+    tier: 'A' | 'B' | 'C'
+    extraction_method: 'deterministic' | 'rule_based' | 'model' | 'human' | 'hybrid'
+    confidence: number
+    human_verified: boolean
+    verified_by: string | null
+    supporting_evidence: string[]
+    version: number
+    superseded_by: number | null
+  } | null
 }
 
 export interface CaseMapDetail {

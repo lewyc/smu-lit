@@ -16,6 +16,7 @@ from app.models import (
     Authority,
     CaseMapAnnotation,
     CaseMapDetail,
+    CaseMapFieldProvenance,
     FeedbackResolution,
     FeedbackSubmission,
     Passage,
@@ -28,6 +29,15 @@ CASE_MAP_SCHEMA_VERSION = "proofmark-case-map-1.0"
 CASE_MAP_PROMPT_VERSION = "sg-rot-casemap-prompt-1.0"
 CASE_MAP_ANNOTATOR_VERSION = "proofmark-casemap-annotator-1.0"
 PDF_MAX_BYTES = 15 * 1024 * 1024
+ROLE_TIERS = {
+    "party_submission": "B",
+    "procedural_history": "B",
+    "disposition": "B",
+    "ratio_candidate": "C",
+    "holding": "C",
+    "obiter_candidate": "C",
+    "factual_finding": "C",
+}
 
 
 class CaseMapAnnotations(BaseModel):
@@ -79,6 +89,11 @@ class CaseMapValidator:
         errors: list[str] = []
         for annotation in annotations:
             messages: list[str] = []
+            expected_tier = ROLE_TIERS[annotation.annotation_type]
+            if annotation.provenance and annotation.provenance.tier != expected_tier:
+                messages.append(
+                    f"Provenance tier {annotation.provenance.tier} is inconsistent with the {annotation.annotation_type} role."
+                )
             if annotation.proposition_code and annotation.proposition_code not in PROPOSITIONS:
                 messages.append("Proposition is outside the controlled taxonomy.")
             selected = [paragraph_by_label.get(label) for label in annotation.paragraph_labels]
@@ -183,7 +198,10 @@ class CaseMapService:
         annotations, model = self.annotator.annotate(authority, authority.passages)
         annotations = [
             annotation.model_copy(
-                update={"paragraph_labels": [self._canonical_label(label) for label in annotation.paragraph_labels]}
+                update={
+                    "paragraph_labels": [self._canonical_label(label) for label in annotation.paragraph_labels],
+                    "provenance": self._provenance(annotation, model),
+                }
             )
             for annotation in annotations
         ]
@@ -236,6 +254,26 @@ class CaseMapService:
             return f"[{numbers[0]}]-[{numbers[1]}]"
         return f"[{numbers[0]}]" if numbers else label
 
+    @staticmethod
+    def _provenance(
+        annotation: CaseMapAnnotation,
+        model: str,
+        *,
+        previous: CaseMapFieldProvenance | None = None,
+    ) -> CaseMapFieldProvenance:
+        method = "rule_based" if model == "local-deterministic-fallback" else "model"
+        if previous:
+            method = "hybrid"
+        return CaseMapFieldProvenance(
+            field=annotation.annotation_type,
+            tier=ROLE_TIERS[annotation.annotation_type],
+            extraction_method=method,
+            confidence=annotation.model_confidence,
+            human_verified=False,
+            supporting_evidence=annotation.paragraph_labels,
+            version=(previous.version + 1) if previous else 1,
+        )
+
     def list(self) -> list[CaseMapDetail]:
         maps = self.repository.list()
         current_hashes = {item.citation_key: self._hash(item) for item in self.corpus.list_authorities()}
@@ -266,7 +304,13 @@ class CaseMapService:
         for annotation in item.annotations:
             if annotation.id == annotation_id:
                 found = True
+                previous_provenance = annotation.provenance
                 annotation = annotation.model_copy(update=revision.model_dump(exclude_none=True))
+                annotation.provenance = self._provenance(
+                    annotation,
+                    item.model,
+                    previous=previous_provenance,
+                )
             annotations.append(annotation)
         if not found:
             raise LookupError("Annotation not found")
@@ -313,7 +357,27 @@ class CaseMapService:
         item.reviewer_id = reviewer_id
         item.reviewed_at = now
         item.updated_at = now
-        item.annotations = [a.model_copy(update={"review_status": "approved"}) for a in item.annotations]
+        item.annotations = [
+            a.model_copy(
+                update={
+                    "review_status": "approved",
+                    "provenance": (
+                        a.provenance.model_copy(
+                            update={
+                                "human_verified": True,
+                                "verified_by": reviewer_id,
+                                "extraction_method": "hybrid"
+                                if a.provenance.extraction_method in {"model", "rule_based"}
+                                else a.provenance.extraction_method,
+                            }
+                        )
+                        if a.provenance
+                        else None
+                    ),
+                }
+            )
+            for a in item.annotations
+        ]
         item.revision_history.append({"event": "approved", "reviewer_id": str(reviewer_id) if reviewer_id else None, "at": now.isoformat()})
         return self.repository.replace(item)
 

@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(15);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
@@ -51,6 +51,36 @@ from public.source_imports;
 insert into public.case_map_review_events (case_map_run_id, actor_id, event_type)
 select id, created_by, 'edit' from public.case_map_runs
 where normalised_citation_key = '2025SGHC1';
+
+insert into public.case_map_annotations (
+  case_map_run_id, annotation_type, statement, paragraph_labels,
+  supporting_quote, modality, model_confidence, validation_status
+)
+select id, 'holding', 'fixture annotation', array['[1]'], 'fixture annotation',
+  'qualified', 0.5, 'valid'
+from public.case_map_runs;
+
+insert into public.case_map_field_dependencies (
+  audit_claim_id, case_map_annotation_id, case_map_version, consumed_for
+)
+select claim.id, annotation.id, map.map_version, 'proposition_support'
+from public.audit_claims claim
+join public.audit_runs run on run.id = claim.audit_run_id
+join public.case_map_runs map on map.organisation_id = run.organisation_id
+join public.case_map_annotations annotation on annotation.case_map_run_id = map.id;
+
+-- Deliberately malformed cross-tenant dependency: RLS must hide it even if a
+-- privileged writer ever creates an inconsistent relation.
+insert into public.case_map_field_dependencies (
+  audit_claim_id, case_map_annotation_id, case_map_version, consumed_for
+)
+select claim.id, annotation.id, map.map_version, 'authority_role'
+from public.audit_claims claim
+join public.audit_runs run on run.id = claim.audit_run_id
+join public.case_map_runs map on map.organisation_id <> run.organisation_id
+join public.case_map_annotations annotation on annotation.case_map_run_id = map.id
+where run.input_text = 'RLS fixture A'
+limit 1;
 
 insert into public.practitioner_feedback (
   organisation_id, audit_claim_id, submitted_by, category, explanation
@@ -129,6 +159,12 @@ select results_eq(
   $$ select count(*)::bigint from public.practitioner_feedback $$,
   $$ values (1::bigint) $$,
   'a member reads only their organisation feedback'
+);
+
+select results_eq(
+  $$ select count(*)::bigint from public.case_map_field_dependencies $$,
+  $$ values (1::bigint) $$,
+  'the reverse dependency index is tenant-scoped through the audit claim'
 );
 
 select throws_ok(

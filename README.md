@@ -11,7 +11,8 @@ case-law database.
 Official snapshot -> paragraph-anchored Case Map draft -> lawyer approval
 Pasted AI answer + optional question/facts -> parsed legal claims
 -> citation, pinpoint, modality, context, currency and omission checks
--> deterministic scores and verdicts -> lawyer handoff and feedback review
+-> Q1 existence -> Q2 fidelity -> Q3 legal significance -> Q4 completeness
+-> gates before configurable weights -> lawyer handoff and feedback review
 -> optional Supabase persistence
 ```
 
@@ -54,6 +55,29 @@ fallback creates conservative paragraph-anchored draft records from existing
 labels. Exact quotes and paragraph ownership are validated deterministically.
 Reviewer corrections create a superseding version; approval never promotes a
 runtime result above `context_review`.
+
+Each Case Map annotation carries a field-level provenance envelope: Tier A
+(deterministic record facts), Tier B (structurally inferable), or Tier C
+(legally judgmental), plus extraction method, confidence, evidence anchors,
+version, and human-review state. A model-extracted Tier C field may inform a
+review prompt but cannot trigger a hard score gate. The Supabase schema also
+contains a reverse dependency index so a future recomputation worker can find
+audits that consumed a corrected Case Map field.
+
+Audit reports use the VERITAS five-level failure taxonomy: non-existent
+authority, citation substitution, citation fidelity, contextual
+mischaracterisation, and synthesis/coverage. The Claim Graph is returned as a
+small JSON bipartite graph rather than adding a graph database. Full mode runs
+one bounded landmark-candidate comparison and records the corpus, set version,
+configuration, independence limitation, and searched-but-not-found list.
+This is not independent counter-authority retrieval and does not prove an
+answer complete.
+
+Scoring policy lives in api/data/assurance_policy.json; changing its version
+invalidates the exact-result cache. Citation, unsupported-assertion, and
+approved-currency gates run before weights. Direct contradiction remains
+explicitly unassessed because lexical similarity is not Legal NLI. Exact and
+whitespace-normalised quotation checks run against stored judgment text only.
 
 Before the first official refresh, the Case Map workbench alone exposes the six
 isolated gold judgments as a clearly labelled preprocessing demo source. This
@@ -134,7 +158,8 @@ production path.
 ProofMark does not use earlier user answers as legal authority, feedback, or
 training data. It may reuse an exact result only when this cache key matches:
 answer + original question + facts + audit mode + corpus version + engine
-version + parser version + taxonomy version + approved currency-register version.
+version + parser version + taxonomy version + approved currency-register
+version + assurance-policy version.
 
 Thus a new source snapshot, engine rule, parser version, question, facts, or
 mode, or lawyer-approved currency review creates a cache miss and a full
@@ -222,3 +247,8 @@ LicensedSourceConnector may ingest private tenant material only when the
 organisation's licence and terms permit it. PGMQ workers, pgvector,
 organisation administration, and deployed worker/API scaling remain production
 architecture targets, not silently simulated features.
+
+The VERITAS provenance/dependency migration was hand-authored from the updated
+declarative schema because the Supabase CLI was unavailable in this workspace.
+It has not been applied to the remote project; review it, then run the normal
+migration, RLS-test, and database-advisor workflow.

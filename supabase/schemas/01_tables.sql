@@ -280,7 +280,26 @@ create table public.case_map_annotations (
   validation_status text not null check (validation_status in ('valid', 'warning', 'invalid')),
   validation_messages text[] not null default '{}',
   review_status text not null default 'draft' check (review_status in ('draft', 'approved', 'rejected', 'superseded')),
+  field_tier text not null default 'C' check (field_tier in ('A', 'B', 'C')),
+  extraction_method text not null default 'model' check (extraction_method in ('deterministic', 'rule_based', 'model', 'human', 'hybrid')),
+  human_verified boolean not null default false,
+  verified_by uuid references auth.users(id) on delete restrict,
+  supporting_evidence text[] not null default '{}',
+  field_version bigint not null default 1 check (field_version > 0),
+  superseded_by_id bigint references public.case_map_annotations(id) on delete restrict,
   created_at timestamptz not null default now()
+);
+
+create table public.case_map_field_dependencies (
+  id bigint generated always as identity primary key,
+  audit_claim_id bigint not null references public.audit_claims(id) on delete restrict,
+  case_map_annotation_id bigint not null references public.case_map_annotations(id) on delete restrict,
+  case_map_version bigint not null check (case_map_version > 0),
+  consumed_for text not null check (consumed_for in (
+    'proposition_support', 'authority_role', 'modality', 'limitation', 'applicability'
+  )),
+  created_at timestamptz not null default now(),
+  unique (audit_claim_id, case_map_annotation_id, case_map_version, consumed_for)
 );
 
 create table public.case_map_review_events (
@@ -423,6 +442,12 @@ create index case_map_runs_created_by_idx on public.case_map_runs (created_by);
 create index case_map_runs_reviewed_by_idx on public.case_map_runs (reviewed_by) where reviewed_by is not null;
 create index case_map_runs_hash_idx on public.case_map_runs (document_hash, schema_version);
 create index case_map_annotations_run_idx on public.case_map_annotations (case_map_run_id, review_status);
+create index case_map_annotations_verified_by_idx on public.case_map_annotations (verified_by)
+  where verified_by is not null;
+create index case_map_annotations_superseded_by_idx on public.case_map_annotations (superseded_by_id)
+  where superseded_by_id is not null;
+create index case_map_field_dependencies_claim_idx on public.case_map_field_dependencies (audit_claim_id);
+create index case_map_field_dependencies_annotation_idx on public.case_map_field_dependencies (case_map_annotation_id, case_map_version);
 create index case_map_review_events_run_created_idx on public.case_map_review_events (case_map_run_id, created_at);
 create index case_map_review_events_annotation_idx on public.case_map_review_events (annotation_id) where annotation_id is not null;
 create index case_map_review_events_actor_idx on public.case_map_review_events (actor_id) where actor_id is not null;

@@ -144,6 +144,12 @@ function MapEditor({ map, busy, onChange, onSave, onApprove }: { map: CaseMapDet
       {map.status === 'stale' && <div className="offline-banner"><TriangleAlert size={18} /><div><strong>Stale source hash</strong><p>Regenerate this map from the current official snapshot before approval.</p></div></div>}
       {map.annotations.map((annotation) => (
         <article className="panel annotation-card" key={annotation.id}>
+          <div className="provenance-strip">
+            <span className={'tier-badge tier-' + (annotation.provenance?.tier ?? 'C')}>Tier {annotation.provenance?.tier ?? 'C'}</span>
+            <span>{annotation.provenance?.extraction_method.replace('_', ' ') ?? 'legacy extraction'}</span>
+            <span>{annotation.provenance?.human_verified ? 'Human verified' : 'Awaiting human verification'}</span>
+            <span>Field v{annotation.provenance?.version ?? 1}</span>
+          </div>
           <div className="annotation-grid">
             <label>Authority role<select value={annotation.annotation_type} onChange={(event) => update(annotation.id, 'annotation_type', event.target.value)}>{['holding', 'ratio_candidate', 'obiter_candidate', 'party_submission', 'factual_finding', 'procedural_history', 'disposition'].map((role) => <option key={role}>{role}</option>)}</select></label>
             <label>Modality<select value={annotation.modality} onChange={(event) => update(annotation.id, 'modality', event.target.value)}>{['mandatory', 'qualified', 'permissive', 'descriptive'].map((value) => <option key={value}>{value}</option>)}</select></label>
@@ -152,7 +158,7 @@ function MapEditor({ map, busy, onChange, onSave, onApprove }: { map: CaseMapDet
           <label>Structured statement<textarea value={annotation.statement} onChange={(event) => update(annotation.id, 'statement', event.target.value)} /></label>
           <label>Exact supporting quotation<textarea value={annotation.supporting_quote} onChange={(event) => update(annotation.id, 'supporting_quote', event.target.value)} /></label>
           {annotation.validation_messages.map((message) => <p className="validation-error" key={message}>{message}</p>)}
-          <div className="annotation-footer"><span>{Math.round(annotation.model_confidence * 100)}% model confidence · {annotation.validation_status}</span><button className="button secondary" disabled={busy} onClick={() => onSave(annotation)}><Save size={15} />Validate & save</button></div>
+          <div className="annotation-footer"><span>{Math.round(annotation.model_confidence * 100)}% extraction confidence · {annotation.validation_status}{annotation.provenance?.tier === 'C' && !annotation.provenance.human_verified ? ' · advisory only; cannot trigger a gate' : ''}</span><button className="button secondary" disabled={busy} onClick={() => onSave(annotation)}><Save size={15} />Validate & save</button></div>
         </article>
       ))}
       <details className="panel source-paragraphs"><summary>View {map.source_paragraphs.length} immutable source paragraphs</summary>{map.source_paragraphs.map((passage) => <blockquote key={passage.id}><strong>{passage.paragraph_label}</strong> {passage.text}</blockquote>)}</details>

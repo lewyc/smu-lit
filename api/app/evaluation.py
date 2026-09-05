@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from app.assurance import assurance_policy
 from app.models import AuditedClaim, ContextProfile, EvaluationFlag, ModuleScore
 
 ISSUE_CHECKLIST = {
@@ -72,9 +73,30 @@ def context_profile(original_question: str | None, facts: str | None) -> Context
 def evaluate_framework(
     claims: list[AuditedClaim], mode: str, profile: ContextProfile | None
 ) -> tuple[list[EvaluationFlag], dict[str, ModuleScore]]:
+    weights = assurance_policy()["weights"]
     flags: list[EvaluationFlag] = []
     in_scope = [claim for claim in claims if claim.verdict != "out_of_scope"]
     for claim in in_scope:
+        if claim.verdict == "unsupported" and not claim.citation:
+            flags.append(
+                EvaluationFlag(
+                    code="unsupported_legal_assertion",
+                    module="propositional_accuracy",
+                    severity="serious",
+                    message="An extracted legal assertion that requires authority has no supporting citation.",
+                    claim_order=claim.order,
+                )
+            )
+        if any(check.status == "not_found" for check in claim.quote_checks):
+            flags.append(
+                EvaluationFlag(
+                    code="unverified_quote",
+                    module="citation_integrity",
+                    severity="serious",
+                    message="Quoted wording was not found in the cited judgment after exact and whitespace-normalised checks.",
+                    claim_order=claim.order,
+                )
+            )
         if claim.pinpoint_status in {"missing", "wrong_proposition"}:
             flags.append(
                 EvaluationFlag(
@@ -161,21 +183,21 @@ def evaluate_framework(
                 )
             )
         balance_score = _percentage(len(expected & present), len(expected))
-        balance = ModuleScore(score=balance_score, weight=15, assessed=True)
+        balance = ModuleScore(score=balance_score, weight=weights["balance"], assessed=True)
     else:
         balance = ModuleScore(
             score=None,
-            weight=15,
+            weight=weights["balance"],
             assessed=False,
             reason_not_assessed="Balance and omissions require the original question and facts in full mode.",
         )
 
     modules = {
-        "citation": ModuleScore(score=citation_score, weight=30, assessed=True),
-        "proposition": ModuleScore(score=proposition_score, weight=35, assessed=True),
+        "citation": ModuleScore(score=citation_score, weight=weights["citation"], assessed=True),
+        "proposition": ModuleScore(score=proposition_score, weight=weights["proposition"], assessed=True),
         "currency": ModuleScore(
             score=currency_score if currency_known else None,
-            weight=20,
+            weight=weights["currency"],
             assessed=bool(currency_known),
             reason_not_assessed=None if currency_known else "No lawyer-approved authority-treatment record is available.",
         ),
@@ -187,7 +209,8 @@ def evaluate_framework(
 def overall_score(modules: dict[str, ModuleScore], mode: str) -> float | None:
     if mode != "full" or not all(item.assessed for item in modules.values()):
         return None
-    return round(sum((item.score or 0) * item.weight for item in modules.values()) / 100, 1)
+    total_weight = sum(item.weight for item in modules.values())
+    return round(sum((item.score or 0) * item.weight for item in modules.values()) / total_weight, 1)
 
 
 def _percentage(numerator: int, denominator: int) -> float:

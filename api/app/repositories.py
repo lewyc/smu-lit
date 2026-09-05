@@ -381,7 +381,14 @@ class SupabaseGovernanceRepository(SupabaseAuditRepository):
             run_id = existing.data["id"]
             self.client.table("case_map_runs").update(payload).eq("id", run_id).execute()
             if case_map.status == "approved":
-                self.client.table("case_map_annotations").update({"review_status": "approved"}).eq("case_map_run_id", run_id).execute()
+                self.client.table("case_map_annotations").update(
+                    {
+                        "review_status": "approved",
+                        "human_verified": True,
+                        "verified_by": self.user_id,
+                        "extraction_method": "hybrid",
+                    }
+                ).eq("case_map_run_id", run_id).execute()
                 self.client.table("case_map_review_events").insert(
                     {
                         "case_map_run_id": run_id,
@@ -408,6 +415,20 @@ class SupabaseGovernanceRepository(SupabaseAuditRepository):
                     "validation_status": annotation.validation_status,
                     "validation_messages": annotation.validation_messages,
                     "review_status": annotation.review_status,
+                    "field_tier": annotation.provenance.tier if annotation.provenance else "C",
+                    "extraction_method": annotation.provenance.extraction_method if annotation.provenance else "model",
+                    "human_verified": annotation.provenance.human_verified if annotation.provenance else False,
+                    "verified_by": (
+                        str(annotation.provenance.verified_by)
+                        if annotation.provenance and annotation.provenance.verified_by
+                        else None
+                    ),
+                    "supporting_evidence": (
+                        annotation.provenance.supporting_evidence
+                        if annotation.provenance
+                        else annotation.paragraph_labels
+                    ),
+                    "field_version": annotation.provenance.version if annotation.provenance else 1,
                 }
                 for annotation in case_map.annotations
             ]

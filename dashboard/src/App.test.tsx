@@ -101,4 +101,19 @@ describe('ProofMark dashboard', () => {
     expect(screen.getByRole('link', { name: /Refers to claim 01/i })).toHaveAttribute('href', '#claim-1')
     expect(screen.getByRole('link', { name: /Derived from the submitted question/i })).toHaveAttribute('href', '#submitted-input')
   })
+
+  it('renders the four-question assurance spine and gate-first scorecard', async () => {
+    vi.spyOn(auditRepository, 'getAudit').mockResolvedValue(savedDemoResult)
+    render(
+      <MemoryRouter initialEntries={['/audits/fixture-audit']}>
+        <Routes>
+          <Route path="/audits/:id" element={<AuditDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('region', { name: /Four-question assurance spine/i })).toBeInTheDocument()
+    expect(screen.getByText(/Does the authority exist and is it correctly identified/i)).toBeInTheDocument()
+    expect(screen.getByText(/Gates before weights/i)).toBeInTheDocument()
+    expect(screen.getByText(/What each claim says supports it/i)).toBeInTheDocument()
+  })
 })

@@ -14,6 +14,7 @@ alter table public.benchmark_runs enable row level security;
 alter table public.source_imports enable row level security;
 alter table public.case_map_runs enable row level security;
 alter table public.case_map_annotations enable row level security;
+alter table public.case_map_field_dependencies enable row level security;
 alter table public.case_map_review_events enable row level security;
 alter table public.authority_assessments enable row level security;
 alter table public.authority_relationships enable row level security;
@@ -37,6 +38,7 @@ revoke all on table public.benchmark_runs from anon, authenticated;
 revoke all on table public.source_imports from anon, authenticated;
 revoke all on table public.case_map_runs from anon, authenticated;
 revoke all on table public.case_map_annotations from anon, authenticated;
+revoke all on table public.case_map_field_dependencies from anon, authenticated;
 revoke all on table public.case_map_review_events from anon, authenticated;
 revoke all on table public.authority_assessments from anon, authenticated;
 revoke all on table public.authority_relationships from anon, authenticated;
@@ -60,6 +62,7 @@ grant select on table public.benchmark_runs to authenticated;
 grant select on table public.source_imports to authenticated;
 grant select on table public.case_map_runs to authenticated;
 grant select on table public.case_map_annotations to authenticated;
+grant select on table public.case_map_field_dependencies to authenticated;
 grant select on table public.case_map_review_events to authenticated;
 grant select on table public.authority_assessments to authenticated;
 grant select on table public.authority_relationships to authenticated;
@@ -196,6 +199,22 @@ create policy case_map_annotations_member_read on public.case_map_annotations
       select 1 from public.case_map_runs map
       join public.organisation_members membership on membership.organisation_id = map.organisation_id
       where map.id = case_map_annotations.case_map_run_id
+        and membership.user_id = (select auth.uid())
+    )
+  );
+
+create policy case_map_field_dependencies_member_read on public.case_map_field_dependencies
+  for select to authenticated using (
+    exists (
+      select 1
+      from public.audit_claims claim
+      join public.audit_runs run on run.id = claim.audit_run_id
+      join public.case_map_annotations annotation
+        on annotation.id = case_map_field_dependencies.case_map_annotation_id
+      join public.case_map_runs map on map.id = annotation.case_map_run_id
+      join public.organisation_members membership on membership.organisation_id = run.organisation_id
+      where claim.id = case_map_field_dependencies.audit_claim_id
+        and map.organisation_id = run.organisation_id
         and membership.user_id = (select auth.uid())
     )
   );

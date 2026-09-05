@@ -47,9 +47,14 @@ def test_case_map_generation_is_anchored_and_approval_is_review_only(tmp_path) -
     assert case_map.document_hash == "a" * 64
     assert case_map.annotations[0].paragraph_labels == ["[10]"]
     assert case_map.annotations[0].validation_status == "valid"
+    assert case_map.annotations[0].provenance
+    assert case_map.annotations[0].provenance.tier == "C"
+    assert case_map.annotations[0].provenance.human_verified is False
     approved = service.approve(case_map.public_id)
     assert approved.status == "approved"
     assert approved.annotations[0].review_status == "approved"
+    assert approved.annotations[0].provenance
+    assert approved.annotations[0].provenance.human_verified is True
 
 
 def test_case_map_validator_rejects_invented_quote_and_taxonomy() -> None:
@@ -176,3 +181,52 @@ def test_feedback_marks_review_without_changing_verdict() -> None:
     refreshed = client.get(f"/api/v1/audits/{audit['public_id']}").json()
     assert refreshed["claims"][0]["pending_feedback"] is True
     assert refreshed["claims"][0]["verdict"] == original_verdict
+
+
+def test_veritas_claim_graph_gates_and_four_question_spine_are_traceable() -> None:
+    audit = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository()).audit(
+        AuditSubmission(
+            answer=(
+                "A legitimate interest is required [2007] SGCA 53. "
+                "A former employee always misuses confidential information."
+            ),
+            audit_mode="full",
+            original_question="Is a worldwide restraint enforceable?",
+            facts="The employee had customer access.",
+            parser_mode="local",
+        )
+    )
+    assert audit.assurance_policy_version == "proofmark-veritas-policy-1.0"
+    assert audit.claim_graph
+    assert any(node.node_type == "claim" for node in audit.claim_graph.nodes)
+    assert any(gate.gate_id == "unsupported_assertion" and gate.status == "triggered" for gate in audit.score_gates)
+    assert [item.key for item in audit.assurance_questions] == [
+        "existence",
+        "fidelity",
+        "legal_significance",
+        "completeness",
+    ]
+    assert audit.completeness_searches
+    assert audit.completeness_searches[0].measured_accuracy is None
+
+
+def test_verbatim_quote_check_uses_stored_judgment_text_only() -> None:
+    engine = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), GoldFixtureCorpusRepository())
+    exact = engine.audit(
+        AuditSubmission(
+            answer=(
+                'The court said "A restraint must protect a legitimate proprietary interest before its '
+                'reasonableness is considered." [2007] SGCA 53.'
+            ),
+            parser_mode="local",
+        )
+    ).claims[0]
+    altered = engine.audit(
+        AuditSubmission(
+            answer='The court said "Every restraint is enforceable for two years." [2007] SGCA 53.',
+            parser_mode="local",
+        )
+    ).claims[0]
+    assert exact.quote_checks[0].status == "exact_match"
+    assert altered.quote_checks[0].status == "not_found"
+    assert (altered.verdict, altered.decision_rule_id) == ("unsupported", "PM-CIT-008")
