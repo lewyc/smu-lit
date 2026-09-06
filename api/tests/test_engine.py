@@ -125,7 +125,10 @@ def test_quote_check_fails_loudly_when_the_retained_snapshot_lacks_the_pinpoint(
 
 
 def test_gemini_absence_falls_back_without_changing_gold_fixture_verdicts() -> None:
-    audit = AuditEngine(Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY=""), GoldFixtureCorpusRepository()).audit(
+    audit = AuditEngine(
+        Settings(PROOFMARK_DATA_MODE="demo", GEMINI_API_KEY="", OPENROUTER_API_KEY=""),
+        GoldFixtureCorpusRepository(),
+    ).audit(
         AuditSubmission(
             answer="A legitimate interest is required [2007] SGCA 53.",
             parser_mode="auto",

@@ -256,7 +256,7 @@ npm test -- --run
 npm run build
 
 cd ..\api
-uv run python -m app.research_catalog_cli validate --catalogue-dir api/data/research_catalog/v1
+uv run python -m app.research_catalog_cli validate --catalogue-dir data/research_catalog/v1
 ```
 
 ## Scope boundary

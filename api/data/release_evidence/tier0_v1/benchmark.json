@@ -1,16 +1,16 @@
 {
   "release": "tier0-v1-citation-integrity",
-  "generated_at": "2026-09-05T18:07:49.613987+00:00",
-  "working_tree_id": "b9e8b38-dirty",
+  "generated_at": "2026-09-06T03:25:54.778322+00:00",
+  "working_tree_id": "07125a3-dirty",
   "benchmark": {
-    "fixture_count": 13,
-    "correct_count": 13,
+    "fixture_count": 12,
+    "correct_count": 12,
     "fixture_accuracy": 100.0,
-    "p50_latency_ms": 0.69,
-    "p95_latency_ms": 1.14,
+    "p50_latency_ms": 1.03,
+    "p95_latency_ms": 3.74,
     "performance_runs": 250,
     "error_count": 0,
-    "engine_version": "proofmark-rules-0.3.0",
+    "engine_version": "proofmark-rules-0.4.0",
     "corpus_version": "sg-employment-restraints-gold-fixtures.1",
     "source_provenance_rate": 0.0,
     "citation_heading_match_rate": 0.0,
@@ -28,14 +28,14 @@
         "decision_year_band": "2005-2009",
         "proposition": "reasonableness_between_parties",
         "outcome_direction": "unknown",
-        "passage_count": 2
+        "passage_count": 1
       },
       {
         "court": "Court of Appeal",
         "decision_year_band": "2005-2009",
         "proposition": "reasonableness_public_interest",
         "outcome_direction": "unknown",
-        "passage_count": 2
+        "passage_count": 1
       },
       {
         "court": "Court of Appeal",
@@ -96,7 +96,21 @@
       {
         "court": "High Court",
         "decision_year_band": "2020-2024",
-        "proposition": "interim_injunction_standard",
+        "proposition": "activity_scope",
+        "outcome_direction": "unknown",
+        "passage_count": 1
+      },
+      {
+        "court": "High Court",
+        "decision_year_band": "2020-2024",
+        "proposition": "confidential_information",
+        "outcome_direction": "unknown",
+        "passage_count": 1
+      },
+      {
+        "court": "High Court",
+        "decision_year_band": "2020-2024",
+        "proposition": "customer_connections",
         "outcome_direction": "unknown",
         "passage_count": 1
       },
@@ -105,7 +119,14 @@
         "decision_year_band": "2020-2024",
         "proposition": "legitimate_proprietary_interest",
         "outcome_direction": "unknown",
-        "passage_count": 2
+        "passage_count": 1
+      },
+      {
+        "court": "High Court",
+        "decision_year_band": "2020-2024",
+        "proposition": "non_solicitation_non_dealing",
+        "outcome_direction": "unknown",
+        "passage_count": 1
       },
       {
         "court": "High Court",
@@ -113,118 +134,51 @@
         "proposition": "prima_facie_unenforceable",
         "outcome_direction": "unknown",
         "passage_count": 1
+      },
+      {
+        "court": "High Court",
+        "decision_year_band": "2020-2024",
+        "proposition": "stable_trained_workforce",
+        "outcome_direction": "unknown",
+        "passage_count": 1
       }
     ],
     "gold_authority_count": 6,
     "module_accuracy": {
-      "verdict": 100.0,
-      "identity": 100.0,
-      "pinpoint": 100.0,
-      "quote": 100.0,
-      "role": 100.0
+      "citation": 100.0,
+      "proposition": 100.0,
+      "context": 100.0,
+      "scope": 100.0,
+      "currency": null,
+      "balance": null
     },
     "fabrication_precision": 100.0,
     "fabrication_false_positive_count": 0,
     "confusion_matrix": {
       "verified": {
-        "verified": 1
-      },
-      "unsupported": {
-        "unsupported": 6
-      },
-      "likely_fabricated": {
-        "likely_fabricated": 1
+        "verified": 4
       },
       "context_review": {
         "context_review": 2
       },
-      "unverified": {
-        "unverified": 2
+      "unsupported": {
+        "unsupported": 4
       },
       "out_of_scope": {
         "out_of_scope": 1
+      },
+      "likely_fabricated": {
+        "likely_fabricated": 1
       }
     },
-    "citation_identity_precision": 100.0,
-    "citation_identity_recall": 100.0,
-    "pinpoint_precision": 100.0,
-    "pinpoint_recall": 100.0,
-    "quote_accuracy": 100.0,
-    "gate_confusion_matrix": {
-      "verdict": {
-        "verified": {
-          "verified": 1
-        },
-        "unsupported": {
-          "unsupported": 6
-        },
-        "likely_fabricated": {
-          "likely_fabricated": 1
-        },
-        "context_review": {
-          "context_review": 2
-        },
-        "unverified": {
-          "unverified": 2
-        },
-        "out_of_scope": {
-          "out_of_scope": 1
-        }
-      },
-      "identity": {
-        "matched": {
-          "matched": 6
-        },
-        "case_name_mismatch": {
-          "case_name_mismatch": 1
-        },
-        "unresolved": {
-          "unresolved": 2
-        },
-        "court_code_mismatch": {
-          "court_code_mismatch": 1
-        },
-        "malformed": {
-          "malformed": 1
-        },
-        "not_assessed": {
-          "not_assessed": 2
-        }
-      },
-      "pinpoint": {
-        "matched": {
-          "matched": 3
-        },
-        "wrong_proposition": {
-          "wrong_proposition": 1
-        },
-        "not_supplied": {
-          "not_supplied": 8
-        },
-        "missing": {
-          "missing": 1
-        }
-      },
-      "quote": {
-        "matched": {
-          "matched": 2
-        },
-        "mismatch": {
-          "mismatch": 1
-        },
-        "not_present": {
-          "not_present": 10
-        }
-      },
-      "role": {
-        "unreviewed": {
-          "unreviewed": 12
-        },
-        "obiter": {
-          "obiter": 1
-        }
-      }
-    }
+    "citation_identity_precision": 0.0,
+    "citation_identity_recall": 0.0,
+    "pinpoint_precision": 0.0,
+    "pinpoint_recall": 0.0,
+    "quote_accuracy": 0.0,
+    "gate_confusion_matrix": {},
+    "operating_config_version": "veritas-operating-points-1.0",
+    "latency_target_ms": null
   },
   "release_gate": {
     "zero_errors": true,

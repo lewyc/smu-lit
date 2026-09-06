@@ -1,11 +1,11 @@
 {
   "release": "tier0-v1-citation-integrity",
   "release_ready": false,
-  "checked_at": "2026-09-05T18:11:26.266817+00:00",
+  "checked_at": "2026-09-06T03:25:56.676547+00:00",
   "gates": {
     "official_six_authority_snapshot": {
       "status": "blocked",
-      "reason": "Missing certified snapshot: data\\frozen_snapshot.json; latest official refresh fell back: Refresh failed (RuntimeError); retained sg-employment-restraints-auto-empty.1."
+      "reason": "[2007] SGCA 53: missing approved source-review metadata"
     },
     "legal_source_review": {
       "status": "pending",
@@ -14,10 +14,10 @@
     "benchmark": {
       "status": "passed",
       "artifact": "data\\release_evidence\\tier0_v1\\benchmark.json",
-      "fixture_count": 13,
-      "correct_count": 13,
+      "fixture_count": 12,
+      "correct_count": 12,
       "error_count": 0,
-      "p95_latency_ms": 1.14
+      "p95_latency_ms": 3.74
     },
     "rls": {
       "status": "passed",

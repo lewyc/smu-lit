@@ -27,6 +27,8 @@ def test_audit_can_be_retrieved_in_demo_mode() -> None:
     public_id = created.json()["public_id"]
     fetched = client.get(f"/api/v1/audits/{public_id}")
     assert fetched.status_code == 200
+    # The citation exists in the official source-only snapshot, but no reviewed
+    # proposition annotation supports or contradicts this claim yet.
     assert fetched.json()["claims"][0]["verdict"] == "unverified"
 
 

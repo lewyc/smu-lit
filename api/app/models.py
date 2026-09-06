@@ -600,7 +600,7 @@ class BenchmarkResult(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok"]
+    status: Literal["ok", "degraded"]
     engine_version: str
     corpus_version: str
     data_mode: str
@@ -608,3 +608,5 @@ class HealthResponse(BaseModel):
     gemini_configured: bool
     openrouter_configured: bool = False
     structured_model_provider: Literal["gemini", "openrouter", "none"] = "none"
+    corpus_ready: bool = False
+    corpus_error: str | None = None

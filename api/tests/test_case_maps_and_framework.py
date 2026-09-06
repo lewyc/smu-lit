@@ -8,7 +8,7 @@ from app.config import Settings
 from app.corpus import ActiveCorpusRepository, GoldFixtureCorpusRepository
 from app.engine import AuditEngine
 from app.main import app
-from app.models import AnnotationRevision, AuditSubmission, Authority, CaseMapAnnotation, Passage
+from app.models import AnnotationRevision, AuditSubmission, Authority, CaseMapAnnotation, CorpusMetadata, Passage
 
 client = TestClient(app)
 
@@ -113,11 +113,34 @@ def test_pdf_intake_rejects_oversized_or_non_pdf() -> None:
 
 
 def test_user_supplied_evidence_can_never_reach_verified(tmp_path) -> None:
-    corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     authority = _authority()
     authority.source_provenance = "user_supplied"
     authority.passages[0].source_provenance = "user_supplied"
-    corpus.activate([authority], persist_snapshot=False)
+
+    class UserSuppliedCorpus:
+        def resolve(self, citation_key: str):
+            return authority if citation_key == authority.citation_key else None
+
+        def list_authorities(self):
+            return [authority]
+
+        def negative_check(self, citation_key: str):
+            return None
+
+        def get_metadata(self):
+            return CorpusMetadata(
+                version="user-supplied-test",
+                name="User-supplied test source",
+                jurisdiction="Singapore",
+                scope_statement="Test-only non-runtime repository.",
+                content_hash="a" * 64,
+                source_status="user_supplied",
+                limitations=["Not an active official snapshot."],
+                authority_count=1,
+                passage_count=1,
+            )
+
+    corpus = UserSuppliedCorpus()
     claim = (
         AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
         .audit(AuditSubmission(answer="A legitimate interest is required [2024] SGHC 29.", parser_mode="local"))

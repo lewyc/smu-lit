@@ -74,7 +74,11 @@ class EvidenceMatcher:
         ordered_indexes = sorted(candidate_indexes, key=lambda index: scores[index], reverse=True)[:3]
         for index in ordered_indexes:
             passage = authority.passages[int(index)]
-            supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {"ai_supported", "gold_fixture"}
+            supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {
+                "ai_supported",
+                "human_reviewed",
+                "gold_fixture",
+            }
             relation = "supports" if supports else "unresolved"
             explanation = (
                 "Exact official paragraph selected for this controlled proposition."
@@ -258,6 +262,26 @@ class VerdictEngine:
             result.citation_identity_status = "matched"
             result.decision_rule_id = "PM-CIT-006"
             result.severity = "serious"
+            result.quote_checks = quote_checks
+            return result
+        if evidence and all(item.passage.assessment_status == "unannotated" for item in evidence):
+            result = self._result(
+                claim,
+                "unverified",
+                (
+                    f"{authority.citation} and the retained paragraph resolve to the official judgment, "
+                    "but the source-only snapshot has no reviewed proposition annotation for this evidence."
+                ),
+                "Generate and review a paragraph-anchored Case Map before assessing propositional support.",
+                evidence,
+            )
+            result.pinpoint_status = "matched" if claim.pinpoint else "not_supplied"
+            result.quote_status = quote_status
+            result.citation_identity_status = "matched"
+            result.source_role_status = "unreviewed"
+            result.decision_rule_id = "PM-PROP-000"
+            result.severity = "informational"
+            result.assessment_confidence = "low"
             result.quote_checks = quote_checks
             return result
         if not supporting:
@@ -583,6 +607,9 @@ class AuditEngine:
         currency_statuses: dict[str, str] | None = None,
         currency_registry_version: str = "currency-none",
     ) -> AuditDetail:
+        require_available = getattr(self.corpus, "require_available", None)
+        if callable(require_available):
+            require_available()
         started = time.perf_counter()
         parse_result = parse_with_mode(submission.answer, submission.parser_mode, self.settings)
         claims = [self.verdicts.classify(claim) for claim in parse_result.claims]

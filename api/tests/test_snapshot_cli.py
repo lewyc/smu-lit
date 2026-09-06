@@ -14,13 +14,13 @@ def _snapshot(path: Path) -> Path:
     corpus.activate(
         [
             Authority(
-                id="certified-example",
-                citation="[2025] SGHC 101",
-                citation_key="2025SGHC101",
-                case_name="Example Employer Pte Ltd v Example Employee",
+                id="shopee-certified-fixture",
+                citation="[2024] SGHC 29",
+                citation_key="2024SGHC29",
+                case_name="Shopee Singapore Pte Ltd v Lim Teck Yong",
                 court="High Court",
-                decision_date="2025-01-01",
-                official_url="https://www.elitigation.sg/gd/s/2025_SGHC_101",
+                decision_date="2024-01-31",
+                official_url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
                 source_status="officially_sourced",
                 source_provenance="officially_sourced",
                 assessment_status="human_reviewed",
@@ -30,9 +30,9 @@ def _snapshot(path: Path) -> Path:
                 source_reviewed_at="2026-09-06T00:00:00Z",
                 passages=[
                     Passage(
-                        id="example-1",
+                        id="shopee-1",
                         paragraph_label="[1]",
-                        text="A legitimate proprietary interest is required.",
+                        text="The Claimant is Shopee Singapore Pte Ltd (“Shopee”).",
                         supported_propositions=["legitimate_proprietary_interest"],
                         source_provenance="officially_sourced",
                         assessment_status="human_reviewed",

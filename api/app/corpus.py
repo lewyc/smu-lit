@@ -8,6 +8,7 @@ from threading import RLock
 from typing import Protocol
 
 from app.models import Authority, CorpusMetadata, CoverageCell, Passage
+from app.snapshot_validation import SnapshotValidationError, load_snapshot, validate_snapshot_records
 
 GOLD_CORPUS_VERSION = "sg-employment-restraints-gold-fixtures.1"
 EMPTY_CORPUS_VERSION = "sg-employment-restraints-auto-empty.1"
@@ -310,6 +311,7 @@ class ActiveCorpusRepository:
         self.snapshot_path = snapshot_path
         self._lock = RLock()
         self._authorities: dict[str, Authority] = {}
+        self.load_error: str | None = None
         self._metadata = _metadata(
             EMPTY_CORPUS_VERSION,
             [],
@@ -322,16 +324,17 @@ class ActiveCorpusRepository:
 
     def _load_cached_snapshot(self) -> None:
         if not self.snapshot_path.exists():
+            self.load_error = f"Runtime corpus snapshot is missing: {self.snapshot_path}"
             return
         try:
-            payload = json.loads(self.snapshot_path.read_text(encoding="utf-8"))
-            metadata = CorpusMetadata.model_validate(payload["metadata"])
-            authorities = [Authority.model_validate(item) for item in payload["authorities"]]
-        except (OSError, ValueError, KeyError):
+            metadata, authorities, _ = load_snapshot(self.snapshot_path)
+        except SnapshotValidationError as exc:
+            self.load_error = str(exc)
             return
         metadata.is_cached = True
         self._metadata = metadata
         self._authorities = {item.citation_key: item for item in authorities}
+        self.load_error = None
 
     def activate(
         self,
@@ -352,9 +355,11 @@ class ActiveCorpusRepository:
             snapshot_created_at=now,
             is_cached=False,
         )
+        validate_snapshot_records(metadata, authorities)
         with self._lock:
             self._authorities = {item.citation_key: item for item in authorities}
             self._metadata = metadata
+            self.load_error = None
             if persist_snapshot:
                 self.snapshot_path.parent.mkdir(parents=True, exist_ok=True)
                 self.snapshot_path.write_text(
@@ -368,6 +373,15 @@ class ActiveCorpusRepository:
                     encoding="utf-8",
                 )
         return metadata
+
+    @property
+    def is_ready(self) -> bool:
+        with self._lock:
+            return bool(self._authorities) and self.load_error is None
+
+    def require_available(self) -> None:
+        if not self.is_ready:
+            raise SnapshotValidationError(self.load_error or "Runtime corpus snapshot contains no usable authorities")
 
     def get_metadata(self) -> CorpusMetadata:
         with self._lock:

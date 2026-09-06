@@ -18,6 +18,7 @@ HTML = """
 <html><body>
   <h1>Shopee Singapore Pte Ltd v Lim Teck Yong</h1>
   <p>[2024] SGHC 29</p>
+  <p>Decision Date : 01 February 2024</p>
   <p>[59] must always – and this is a fundamental legal proposition
   in this particular area of the law – be a legitimate proprietary interest</p>
 </body></html>
@@ -108,6 +109,40 @@ def test_refresh_extracts_validated_heading_paragraphs_and_hashes(tmp_path: Path
     assert authority.document_hash
     assert authority.passages[0].text.startswith("must always")
     assert authority.passages[0].assessment_status == "ai_supported"
+
+
+def test_extractor_accepts_bare_numbered_paragraphs_but_not_citation_years(tmp_path: Path) -> None:
+    html = """
+    <html><body>
+      <h1>Shopee Singapore Pte Ltd v Lim Teck Yong</h1>
+      <p>[2024] SGHC 29</p>
+      <p>Decision Date : 01 February 2024</p>
+      <p>1         The first numbered judgment paragraph.</p>
+      <p>A reference to [2007] SGCA 53 does not begin a new paragraph.</p>
+      <p>2. The second numbered judgment paragraph.</p>
+    </body></html>
+    """
+
+    class BareParagraphConnector(FixtureConnector):
+        def fetch(self, candidate: SourceCandidate) -> str:
+            return html
+
+    class EmptyAnnotator:
+        def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
+            return []
+
+    corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
+    result = CorpusRefreshService(
+        corpus,
+        Settings(),
+        connector=BareParagraphConnector(),
+        annotator=EmptyAnnotator(),
+    ).refresh(new_refresh_run(limit=1))
+    assert result.status == "complete"
+    authority = corpus.resolve("2024SGHC29")
+    assert authority is not None
+    assert [item.paragraph_label for item in authority.passages] == ["[1]", "[2]"]
+    assert "[2007] SGCA 53" in authority.passages[0].text
 
 
 def test_official_discovery_parses_html_deduplicates_and_keeps_allowlist() -> None:

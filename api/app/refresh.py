@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from threading import RLock
 from typing import Protocol
 from urllib import robotparser
@@ -39,7 +39,13 @@ CITATION_PATH = re.compile(
     r"(?P<year>\d{4})_(?P<court>SG[A-Z()]+)_(?P<number>\d+)",
     re.IGNORECASE,
 )
-NUMBERED_PARAGRAPH = re.compile(r"^\s*(?:\[(?P<bracket>\d+)\]|(?P<plain>\d+)\.)\s*(?P<text>.+)$")
+NUMBERED_PARAGRAPH = re.compile(
+    r"^\s*(?:\[(?P<bracket>\d{1,3})\]|(?P<plain>\d{1,3})(?:\.|\s+))\s*(?P<text>\S.*)$"
+)
+STANDALONE_PARAGRAPH = re.compile(r"^\s*(?:\[(?P<bracket>\d{1,3})\]|(?P<plain>\d{1,3}))\s*$")
+DECISION_DATE = re.compile(r"Decision\s+Date\s*:\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})", re.IGNORECASE)
+RESERVED_DATE = re.compile(r"(\d{1,2}\s+[A-Za-z]+\s+\d{4})\s+Judgment\s+reserved", re.IGNORECASE)
+CASE_NAME_SIGNAL = re.compile(r"\s(?:v|versus)\s", re.IGNORECASE)
 
 
 class TopicProfile(BaseModel):
@@ -83,6 +89,7 @@ class ExtractedJudgment:
     heading: str
     case_name: str
     court: str
+    decision_date: date
     paragraphs: list[ExtractedParagraph]
     document_hash: str
     retrieved_at: datetime
@@ -222,6 +229,42 @@ class JudgmentExtractor:
             node.decompose()
         return [line.strip() for line in soup.get_text("\n").splitlines() if line.strip()]
 
+    @staticmethod
+    def _case_name(html: str, lines: list[str], heading_index: int, citation: str) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+        candidates: list[str] = []
+        for selector in ("h1", "h2", "h3", "title"):
+            candidates.extend(node.get_text(" ", strip=True) for node in soup.select(selector))
+        candidates.extend(reversed(lines[max(0, heading_index - 20) : heading_index + 1]))
+        vicinity = lines[max(7, heading_index - 10) : heading_index + 26]
+        for index, value in enumerate(vicinity):
+            if value.casefold() != "v" or index == 0 or index + 1 >= len(vicinity):
+                continue
+            left = [vicinity[index - 1]]
+            if index >= 2 and not vicinity[index - 2].casefold().startswith(
+                ("this judgment", "judgments homepage", "close window")
+            ) and not CITATION_TEXT.fullmatch(vicinity[index - 2]):
+                left.insert(0, vicinity[index - 2])
+            candidates.insert(0, f"{'' ''.join(left)} v {vicinity[index + 1]}")
+        for value in candidates:
+            cleaned = re.sub(re.escape(citation), "", value, flags=re.IGNORECASE).strip(" -–|\t")
+            cleaned = re.sub(r"\s+", " ", cleaned)
+            cleaned = re.sub(r"(?<=[a-z])Pte\b", " Pte", cleaned)
+            if 3 <= len(cleaned) <= 300 and CASE_NAME_SIGNAL.search(cleaned):
+                return cleaned
+        raise ValueError("Canonical case name was not found near the validated citation heading")
+
+    @staticmethod
+    def _decision_date(lines: list[str], citation: str) -> date:
+        metadata_text = " ".join(lines[:180])
+        match = DECISION_DATE.search(metadata_text) or RESERVED_DATE.search(metadata_text)
+        if not match:
+            raise ValueError("Decision date was not found in official judgment metadata")
+        parsed = datetime.strptime(match.group(1), "%d %B %Y").date()
+        if parsed.year != int(citation[1:5]):
+            raise ValueError("Decision date year conflicts with the neutral citation")
+        return parsed
+
     def extract(self, candidate: SourceCandidate, html: str) -> ExtractedJudgment:
         if urlparse(candidate.url).hostname not in ALLOWED_HOSTS:
             raise ValueError("Rejected non-allowlisted judgment URL")
@@ -230,30 +273,72 @@ class JudgmentExtractor:
             (
                 index
                 for index, line in enumerate(lines[:120])
-                if normalise_citation(line) == candidate.citation_key or candidate.citation_key in normalise_citation(line)
+                if index > 0
+                and (
+                    normalise_citation(line) == candidate.citation_key
+                    or candidate.citation_key in normalise_citation(line)
+                )
             ),
             None,
         )
         if heading_index is None:
             raise ValueError("Citation does not match a judgment heading")
         heading = lines[heading_index]
-        case_name = lines[heading_index - 1] if heading_index > 0 else heading.split(candidate.citation)[0].strip()
-        if not case_name or normalise_citation(case_name) == candidate.citation_key:
-            case_name = heading.replace(candidate.citation, "").strip(" -–") or candidate.citation
+        case_name = self._case_name(html, lines, heading_index, candidate.citation)
+        decision_date = self._decision_date(lines, candidate.citation)
 
         paragraphs: list[ExtractedParagraph] = []
         current_label: str | None = None
         current_text: list[str] = []
         # A neutral citation also starts with brackets, so never treat the heading
         # itself (or boilerplate before it) as a numbered judgment paragraph.
-        for line in lines[heading_index + 1 :]:
-            match = NUMBERED_PARAGRAPH.match(line)
+        body_lines = lines[heading_index + 1 :]
+        parsed_lines = [
+            (line, NUMBERED_PARAGRAPH.match(line), STANDALONE_PARAGRAPH.match(line)) for line in body_lines
+        ]
+        first_paragraph = next(
+            (
+                index
+                for index, (_, match, standalone) in enumerate(parsed_lines)
+                if (
+                    match
+                    and int(match.group("bracket") or match.group("plain")) == 1
+                    or standalone
+                    and int(standalone.group("bracket") or standalone.group("plain")) == 1
+                    and index + 1 < len(parsed_lines)
+                    and not parsed_lines[index + 1][0].casefold().startswith("foot note")
+                )
+            ),
+            None,
+        )
+        if first_paragraph is not None:
+            parsed_lines = parsed_lines[first_paragraph:]
+        current_number: int | None = None
+        for index, (line, match, standalone) in enumerate(parsed_lines):
             if match:
+                number = int(match.group("bracket") or match.group("plain"))
+                if current_number is not None and number != current_number + 1:
+                    current_text.append(line)
+                    continue
                 if current_label and current_text:
                     paragraphs.append(ExtractedParagraph(current_label, " ".join(current_text)))
-                number = match.group("bracket") or match.group("plain")
                 current_label = f"[{number}]"
+                current_number = number
                 current_text = [match.group("text")]
+            elif standalone:
+                number = int(standalone.group("bracket") or standalone.group("plain"))
+                next_is_footnote = index + 1 < len(parsed_lines) and parsed_lines[index + 1][0].casefold().startswith(
+                    "foot note"
+                )
+                if current_number is None or number != current_number + 1 or next_is_footnote:
+                    if current_label:
+                        current_text.append(line)
+                    continue
+                if current_label and current_text:
+                    paragraphs.append(ExtractedParagraph(current_label, " ".join(current_text)))
+                current_label = f"[{number}]"
+                current_number = number
+                current_text = []
             elif current_label:
                 current_text.append(line)
         if current_label and current_text:
@@ -262,12 +347,17 @@ class JudgmentExtractor:
             raise ValueError("No numbered paragraphs were extracted")
 
         court_code = re.search(r"SG([A-Z()]+)", candidate.citation_key)
-        court = f"Singapore {court_code.group(1)}" if court_code else "Singapore Courts"
+        code = court_code.group(1) if court_code else ""
+        court = {"CA": "Court of Appeal", "HC": "High Court", "HC(A)": "Appellate Division of the High Court"}.get(
+            code,
+            f"Singapore {code}" if code else "Singapore Courts",
+        )
         return ExtractedJudgment(
             candidate=candidate,
             heading=heading,
             case_name=case_name,
             court=court,
+            decision_date=decision_date,
             paragraphs=paragraphs,
             document_hash=hashlib.sha256(html.encode("utf-8")).hexdigest(),
             retrieved_at=datetime.now(UTC),
@@ -418,7 +508,7 @@ class CorpusRefreshService:
                     source_provenance="officially_sourced",
                     assessment_status="ai_supported" if supported else "unannotated",
                     annotation_confidence=max((item.confidence for item in selected), default=None),
-                    annotation_model=self.settings.gemini_model if selected else None,
+                    annotation_model=self.settings.annotation_model if selected else None,
                     outcome_direction=selected[0].outcome_direction if selected else "unknown",
                     annotation_disagrees=disagreement,
                 )
@@ -429,7 +519,7 @@ class CorpusRefreshService:
             citation_key=judgment.candidate.citation_key,
             case_name=judgment.case_name,
             court=judgment.court,
-            decision_date=datetime.strptime(judgment.candidate.citation[1:5], "%Y").date(),
+            decision_date=judgment.decision_date,
             official_url=judgment.candidate.url,
             source_status="officially_sourced",
             source_provenance="officially_sourced",

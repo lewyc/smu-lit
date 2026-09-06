@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.assurance import assurance_policy
 from app.case_maps import CaseMapService, LocalFeedbackRepository
 from app.config import get_settings
-from app.corpus import DEMO_ANSWER, ActiveCorpusRepository, GoldFixtureCorpusRepository
+from app.corpus import DEMO_ANSWER, ActiveCorpusRepository
 from app.engine import ENGINE_VERSION, AuditEngine
 from app.evaluation import hierarchies
 from app.models import (
@@ -42,6 +42,7 @@ from app.repositories import (
     SupabaseGovernanceRepository,
 )
 from app.scheduler import RefreshScheduler
+from app.snapshot_validation import SnapshotValidationError
 from app.taxonomy import PROPOSITIONS, TAXONOMY_VERSION
 from app.veritas import (
     CONFIG_PATH,
@@ -61,14 +62,14 @@ local_audits = LocalAuditRepository()
 
 
 class CaseMapSourceCorpus:
-    """Uses gold only for preprocessing demos until an official snapshot exists."""
+    """Exposes only the validated runtime snapshot to Case Map preprocessing."""
 
     def __init__(self, runtime: ActiveCorpusRepository) -> None:
         self.runtime = runtime
-        self.gold = GoldFixtureCorpusRepository()
 
     def _source(self):
-        return self.runtime if self.runtime.list_authorities() else self.gold
+        self.runtime.require_available()
+        return self.runtime
 
     def list_authorities(self):
         return self._source().list_authorities()
@@ -140,6 +141,13 @@ def _token(authorization: Annotated[str | None, Header()] = None) -> str | None:
         return None
     scheme, _, token = authorization.partition(" ")
     return token if scheme.lower() == "bearer" and token else None
+
+
+def _require_runtime_corpus() -> None:
+    try:
+        active_corpus.require_available()
+    except SnapshotValidationError as exc:
+        raise HTTPException(status_code=503, detail=f"Runtime legal corpus unavailable: {exc}") from exc
 
 
 def _repository(token: str | None):
@@ -227,7 +235,7 @@ def _currency_context(token: str | None) -> tuple[dict[str, str], str]:
 @app.get("/api/v1/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(
-        status="ok",
+        status="ok" if active_corpus.is_ready else "degraded",
         engine_version=ENGINE_VERSION,
         corpus_version=engine.corpus.get_metadata().version,
         data_mode=settings.data_mode,
@@ -235,6 +243,8 @@ def health() -> HealthResponse:
         gemini_configured=bool(settings.gemini_api_key),
         openrouter_configured=bool(settings.openrouter_api_key),
         structured_model_provider=settings.structured_model_provider,
+        corpus_ready=active_corpus.is_ready,
+        corpus_error=active_corpus.load_error,
     )
 
 
@@ -250,6 +260,8 @@ def corpus_freshness():
         "active_corpus_version": metadata.version,
         "sources_current_as_of": metadata.snapshot_created_at,
         "is_cached_snapshot": metadata.is_cached,
+        "corpus_ready": active_corpus.is_ready,
+        "corpus_error": active_corpus.load_error,
         "scheduler": refresh_scheduler.status(),
         "latest_refresh": refresh_manager.latest(),
     }
@@ -257,11 +269,13 @@ def corpus_freshness():
 
 @app.get("/api/v1/authorities")
 def authorities():
+    _require_runtime_corpus()
     return engine.corpus.list_authorities()
 
 
 @app.get("/api/v1/case-map-sources")
 def case_map_source_authorities():
+    _require_runtime_corpus()
     return case_map_sources.list_authorities()
 
 
@@ -298,6 +312,7 @@ def submit_audit(
     submission: AuditSubmission,
     token: Annotated[str | None, Depends(_token)],
 ) -> AuditDetail:
+    _require_runtime_corpus()
     currency_statuses, currency_registry_version = _currency_context(token)
     repository = None
     if settings.data_mode == "demo":
@@ -333,6 +348,7 @@ def get_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]):
 
 @app.post("/api/v1/audits/{public_id}/re-audit", response_model=AuditDetail)
 def re_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]) -> AuditDetail:
+    _require_runtime_corpus()
     repository = _repository(token)
     prior = repository.get(public_id)
     if not prior:
@@ -367,6 +383,7 @@ def delete_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)])
 
 @app.post("/api/v1/case-maps/generate", response_model=CaseMapDetail)
 def generate_case_map(request: CaseMapGenerateRequest, token: Annotated[str | None, Depends(_token)]):
+    _require_runtime_corpus()
     governance = _governance(token)
     try:
         result = case_maps.generate(request.citation)

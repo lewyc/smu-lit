@@ -3,67 +3,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
-from app.models import Authority, CorpusMetadata
-
-
-class SnapshotValidationError(ValueError):
-    pass
-
-
-def _load_snapshot(path: Path) -> tuple[CorpusMetadata, list[Authority], bytes]:
-    try:
-        raw = path.read_bytes()
-        payload = json.loads(raw)
-        metadata = CorpusMetadata.model_validate(payload["metadata"])
-        authorities = [Authority.model_validate(item) for item in payload["authorities"]]
-    except (OSError, KeyError, ValueError) as exc:
-        raise SnapshotValidationError(f"invalid snapshot: {exc}") from exc
-    if not authorities:
-        raise SnapshotValidationError("snapshot contains no authorities")
-    return metadata, authorities, raw
+from app.snapshot_validation import SnapshotValidationError, load_snapshot, validate_snapshot_records
 
 
 def validate_snapshot(path: Path, *, require_certified: bool = False) -> dict[str, object]:
-    metadata, authorities, raw = _load_snapshot(path)
-    if metadata.authority_count != len(authorities):
-        raise SnapshotValidationError("metadata authority count does not match snapshot contents")
-    if metadata.passage_count != sum(len(item.passages) for item in authorities):
-        raise SnapshotValidationError("metadata passage count does not match snapshot contents")
-    expected_content_hash = hashlib.sha256(
-        json.dumps([authority.model_dump(mode="json") for authority in authorities], sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    if metadata.content_hash != expected_content_hash:
-        raise SnapshotValidationError("metadata content hash does not match snapshot contents")
-    for authority in authorities:
-        host = urlparse(authority.official_url).hostname or ""
-        if host not in {"www.elitigation.sg", "elitigation.sg"}:
-            raise SnapshotValidationError(f"{authority.citation}: official URL is not an eLitigation URL")
-        if not re.fullmatch(r"\[\d{4}\] SG[A-Z()]+ \d+", authority.citation):
-            raise SnapshotValidationError(f"{authority.citation}: malformed neutral citation")
-        if not authority.case_name.strip() or not authority.court.strip():
-            raise SnapshotValidationError(f"{authority.citation}: missing canonical case identity metadata")
-        if authority.source_provenance != "officially_sourced":
-            raise SnapshotValidationError(f"{authority.citation}: snapshot evidence is not officially sourced")
-        if not authority.document_hash or not re.fullmatch(r"[0-9a-f]{64}", authority.document_hash):
-            raise SnapshotValidationError(f"{authority.citation}: missing SHA-256 document hash")
-        if require_certified and (
-            authority.source_review_status != "approved" or not authority.source_reviewer or not authority.source_reviewed_at
-        ):
-            raise SnapshotValidationError(f"{authority.citation}: missing approved source-review metadata")
-        for passage in authority.passages:
-            if not re.search(r"\[\d+", passage.paragraph_label):
-                raise SnapshotValidationError(f"{authority.citation}: passage lacks a numbered paragraph label")
-            if require_certified:
-                if passage.assessment_status != "human_reviewed":
-                    raise SnapshotValidationError(f"{authority.citation} {passage.paragraph_label}: evidence is not human reviewed")
-                if not passage.source_role_reviewed or passage.source_role == "unreviewed" or not passage.source_role_reviewer:
-                    raise SnapshotValidationError(f"{authority.citation} {passage.paragraph_label}: source role is not reviewed")
+    metadata, authorities, raw = load_snapshot(path)
+    validate_snapshot_records(metadata, authorities, require_certified=require_certified)
     return {
         "snapshot_version": metadata.version,
         "content_hash": metadata.content_hash,
