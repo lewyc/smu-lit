@@ -389,6 +389,22 @@ class AuditSubmission(BaseModel):
         return self
 
 
+class AuthoritySearchMetadata(BaseModel):
+    citation_key: str
+    plain_language_summary: str = Field(min_length=1, max_length=320)
+    issue_tags: list[str]
+    search_aliases: list[str] = Field(default_factory=list)
+    review_status: Literal["pending", "approved"] = "pending"
+    reviewer: str | None = None
+    reviewed_at: datetime | None = None
+
+
+class AuthorityView(Authority):
+    """Presentation-only authority fields kept outside immutable evidence."""
+
+    search_metadata: AuthoritySearchMetadata | None = None
+
+
 class AuditSummary(BaseModel):
     public_id: UUID
     created_at: datetime

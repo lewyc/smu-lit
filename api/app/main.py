@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.assurance import assurance_policy
+from app.authority_search import AuthoritySearchMetadataRepository
 from app.case_maps import CaseMapService, LocalFeedbackRepository
 from app.config import get_settings
 from app.corpus import DEMO_ANSWER, ActiveCorpusRepository
@@ -21,6 +22,7 @@ from app.models import (
     AuditDetail,
     AuditSubmission,
     AuditSummary,
+    AuthorityView,
     BenchmarkResult,
     CaseMapDetail,
     CaseMapGenerateRequest,
@@ -57,6 +59,7 @@ from app.veritas import (
 
 settings = get_settings()
 active_corpus = ActiveCorpusRepository()
+authority_search_metadata = AuthoritySearchMetadataRepository()
 engine = AuditEngine(settings, active_corpus)
 local_audits = LocalAuditRepository()
 
@@ -267,10 +270,10 @@ def corpus_freshness():
     }
 
 
-@app.get("/api/v1/authorities")
-def authorities():
+@app.get("/api/v1/authorities", response_model=list[AuthorityView])
+def authorities() -> list[AuthorityView]:
     _require_runtime_corpus()
-    return engine.corpus.list_authorities()
+    return authority_search_metadata.decorate(engine.corpus.list_authorities())
 
 
 @app.get("/api/v1/case-map-sources")

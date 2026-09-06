@@ -1,10 +1,13 @@
 import { CheckCircle2, FileUp, RefreshCw, Save, Sparkles, TriangleAlert } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ErrorPanel, LoadingPanel, PageHeader } from '../components/Common'
 import { auditRepository } from '../lib/repository'
 import type { Authority, CaseMapAnnotation, CaseMapDetail, PractitionerFeedback } from '../types'
 
 export function CaseMapsPage() {
+  const [searchParams] = useSearchParams()
+  const requestedCitation = searchParams.get('citation') ?? ''
   const [authorities, setAuthorities] = useState<Authority[]>([])
   const [maps, setMaps] = useState<CaseMapDetail[]>([])
   const [feedback, setFeedback] = useState<PractitionerFeedback[]>([])
@@ -22,14 +25,16 @@ export function CaseMapsPage() {
       setAuthorities(authorityRows)
       setMaps(mapRows)
       setFeedback(feedbackRows)
-      setSelectedCitation((value) => value || authorityRows[0]?.citation || '')
-      setSelected((value) => value ?? mapRows[0] ?? null)
+      const requestedAuthority = authorityRows.find((item) => item.citation === requestedCitation)
+      const requestedMap = mapRows.find((item) => item.citation === requestedCitation && item.status !== 'superseded')
+      setSelectedCitation((value) => value || requestedAuthority?.citation || authorityRows[0]?.citation || '')
+      setSelected((value) => value ?? requestedMap ?? mapRows[0] ?? null)
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Review data could not be loaded.')
     }
   }
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load() }, [requestedCitation])
 
   async function generate() {
     if (!selectedCitation) return

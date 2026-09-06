@@ -1,0 +1,56 @@
+[
+  {
+    "citation_key": "2007SGCA53",
+    "plain_language_summary": "Addresses when post-employment restraints protect a legitimate business interest, including employee solicitation, reasonableness and severance.",
+    "issue_tags": ["legitimate_proprietary_interest", "stable_trained_workforce", "non_solicitation_non_dealing", "reasonableness_between_parties", "reasonableness_public_interest", "severance_blue_pencil"],
+    "search_aliases": ["non-compete", "staff poaching", "employee solicitation", "trained workforce", "blue pencil", "settlement agreement"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "citation_key": "2010SGCA3",
+    "plain_language_summary": "Addresses the legitimate-interest and reasonableness requirements applied to restrictive covenants in an employment dispute.",
+    "issue_tags": ["legitimate_proprietary_interest", "reasonableness_between_parties", "reasonableness_public_interest"],
+    "search_aliases": ["non-compete", "restrictive covenant", "reasonable restraint", "protectable interest"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "citation_key": "2012SGCA39",
+    "plain_language_summary": "Addresses whether an employment restraint protects a legitimate interest and is no wider than reasonably necessary.",
+    "issue_tags": ["legitimate_proprietary_interest", "reasonableness_between_parties", "activity_scope"],
+    "search_aliases": ["non-compete", "restrictive covenant", "business interest", "scope of restraint"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "citation_key": "2019SGHC96",
+    "plain_language_summary": "Addresses post-employment restrictions concerning confidential information, customer relationships and solicitation.",
+    "issue_tags": ["confidential_information", "customer_connections", "non_solicitation_non_dealing"],
+    "search_aliases": ["trade secrets", "client relationships", "customer solicitation", "staff poaching"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "citation_key": "2024SGHC29",
+    "plain_language_summary": "Addresses the evidence and legal threshold for interim restrictions preventing a former employee from joining a competitor.",
+    "issue_tags": ["interim_injunction_standard", "legitimate_proprietary_interest", "non_solicitation_non_dealing"],
+    "search_aliases": ["injunction", "joining a competitor", "non-compete", "employee move", "balance of convenience"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "citation_key": "2024SGHC94",
+    "plain_language_summary": "Addresses broad non-compete and confidentiality clauses, including limits relating to activity, geography, duration and severance.",
+    "issue_tags": ["prima_facie_unenforceable", "confidential_information", "geographic_scope", "duration_scope", "activity_scope", "cascading_restraint", "severance_blue_pencil", "interim_injunction_standard"],
+    "search_aliases": ["non-compete", "trade secrets", "worldwide restraint", "time limit", "cascading clause", "blue pencil", "injunction"],
+    "review_status": "pending",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

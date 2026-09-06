@@ -55,7 +55,18 @@ export interface Authority {
   source_review_status?: 'pending' | 'approved'
   source_reviewer?: string | null
   source_reviewed_at?: string | null
+  search_metadata?: AuthoritySearchMetadata | null
   passages: Passage[]
+}
+
+export interface AuthoritySearchMetadata {
+  citation_key: string
+  plain_language_summary: string
+  issue_tags: string[]
+  search_aliases: string[]
+  review_status: 'pending' | 'approved'
+  reviewer?: string | null
+  reviewed_at?: string | null
 }
 
 export interface Evidence {
