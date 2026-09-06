@@ -86,6 +86,13 @@ class DiscoveryHttpClient:
         )
 
 
+class MissingRobotsHttpClient(DiscoveryHttpClient):
+    def get(self, url: str) -> httpx.Response:
+        if url.endswith("/robots.txt"):
+            return httpx.Response(404, request=httpx.Request("GET", url))
+        return super().get(url)
+
+
 def test_refresh_extracts_validated_heading_paragraphs_and_hashes(tmp_path: Path) -> None:
     corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
     result = CorpusRefreshService(
@@ -110,6 +117,13 @@ def test_official_discovery_parses_html_deduplicates_and_keeps_allowlist() -> No
     assert [(candidate.citation_key, candidate.url) for candidate in candidates] == [
         ("2024SGHC29", "https://www.elitigation.sg/gdviewer/s/2024_SGHC_29")
     ]
+
+
+def test_official_discovery_records_a_missing_robots_policy_without_treating_it_as_disallow() -> None:
+    connector = SGCourtsConnector(client=MissingRobotsHttpClient(), sleep=lambda _: None)
+    candidates = connector.discover(TopicProfile(version="test", queries=["employment restraint"]), limit=25)
+    assert candidates
+    assert connector.robots_policy_status == "not_published_404"
 
 
 def test_invalid_annotation_retains_last_successful_snapshot(tmp_path: Path) -> None:

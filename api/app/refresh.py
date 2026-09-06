@@ -26,6 +26,7 @@ from app.models import (
     RefreshRun,
 )
 from app.parsers import canonical_citation, normalise_citation
+from app.structured_model import generate_structured
 from app.taxonomy import PROPOSITIONS, proposition_for
 
 EXTRACTOR_VERSION = "sgcourts-html-extractor.1"
@@ -114,13 +115,14 @@ class SGCourtsConnector:
         self.base_search_url = base_search_url
         self._last_request_at: float | None = None
         self._robots_checked = False
+        self.robots_policy_status = "not_checked"
 
     @staticmethod
     def _allowed(url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme == "https" and parsed.hostname in ALLOWED_HOSTS
 
-    def _get(self, url: str) -> httpx.Response:
+    def _get(self, url: str, *, accepted_statuses: frozenset[int] = frozenset()) -> httpx.Response:
         if not self._allowed(url):
             raise ValueError("Source URL is not an allowlisted SG Courts host")
         if self._last_request_at is not None:
@@ -132,7 +134,8 @@ class SGCourtsConnector:
             try:
                 response = self.client.get(url)
                 self._last_request_at = time.monotonic()
-                response.raise_for_status()
+                if response.status_code not in accepted_statuses:
+                    response.raise_for_status()
                 if "maintenance notice" in response.text.lower():
                     raise RuntimeError("SG Courts search is temporarily unavailable")
                 return response
@@ -189,11 +192,20 @@ class SGCourtsConnector:
         if self._robots_checked:
             return
         robots_url = "https://www.elitigation.sg/robots.txt"
-        response = self._get(robots_url)
+        response = self._get(robots_url, accepted_statuses=frozenset({404}))
+        if response.status_code == 404:
+            # No robots resource was published. This is not an override of an
+            # explicit policy: non-404 failures and explicit disallow rules
+            # remain blocking, while the host allowlist and throttle still apply.
+            self.robots_policy_status = "not_published_404"
+            self._robots_checked = True
+            return
         parser = robotparser.RobotFileParser()
         parser.parse(response.text.splitlines())
         if not parser.can_fetch("ProofMark-corpus-refresh", self.base_search_url):
+            self.robots_policy_status = "disallowed"
             raise RuntimeError("SG Courts robots guidance disallows automated refresh")
+        self.robots_policy_status = "allowed"
         self._robots_checked = True
 
     def fetch(self, candidate: SourceCandidate) -> str:
@@ -285,10 +297,8 @@ class GeminiEvidenceAnnotator:
         self.settings = settings
 
     def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
-        if not self.settings.gemini_api_key:
-            raise RuntimeError("Gemini API key is not configured")
-        from google import genai
-        from google.genai import types
+        if not self.settings.has_structured_model_key:
+            raise RuntimeError("No structured-model API key is configured")
 
         candidates = []
         for paragraph in judgment.paragraphs:
@@ -304,22 +314,14 @@ class GeminiEvidenceAnnotator:
             "or provide a verdict. Select a paragraph only where it materially addresses the "
             f"proposition. Controlled taxonomy: {sorted(PROPOSITIONS)}.\n\n{excerpts}"
         )
-        client = genai.Client(
-            api_key=self.settings.gemini_api_key,
-            http_options=types.HttpOptions(timeout=int(self.settings.gemini_timeout_seconds * 1000)),
+        parsed = generate_structured(
+            self.settings,
+            model=self.settings.annotation_model,
+            prompt=prompt,
+            response_schema=GeminiEvidenceAnnotations,
         )
-        response = client.models.generate_content(
-            model=self.settings.gemini_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=GeminiEvidenceAnnotations,
-                temperature=0,
-            ),
-        )
-        parsed = response.parsed
         if not isinstance(parsed, GeminiEvidenceAnnotations):
-            raise ValueError("Gemini returned no schema-valid annotations")
+            raise ValueError("Structured model returned no schema-valid annotations")
         labels = {item.label for item in judgment.paragraphs}
         cleaned: list[EvidenceAnnotation] = []
         for annotation in parsed.annotations:
@@ -383,9 +385,17 @@ class CorpusRefreshService:
             run.status = "fallback"
             run.fallback_reason = f"Refresh failed ({type(exc).__name__}); retained {previous.version}."
             run.active_corpus_version = previous.version
+        run.robots_policy_status = self._robots_policy_status()
         run.completed_at = datetime.now(UTC)
         run.duration_ms = round((time.perf_counter() - started) * 1000, 2)
         return run
+
+    def _robots_policy_status(self) -> str:
+        connector = self.connector
+        status = getattr(connector, "robots_policy_status", None)
+        if status is None:
+            status = getattr(getattr(connector, "delegate", None), "robots_policy_status", None)
+        return status if status in {"not_checked", "allowed", "not_published_404", "disallowed"} else "not_checked"
 
     def _authority_from(self, judgment: ExtractedJudgment, annotations: list[EvidenceAnnotation]) -> Authority:
         by_label: dict[str, list[EvidenceAnnotation]] = {}

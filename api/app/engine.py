@@ -552,9 +552,9 @@ class AuditEngine:
         )
 
     def _requested_parser_version(self, submission: AuditSubmission) -> str:
-        if submission.parser_mode == "local" or not self.settings.gemini_api_key:
+        if submission.parser_mode == "local" or not self.settings.has_structured_model_key:
             return LOCAL_PARSER_VERSION
-        return f"gemini-claims:{self.settings.claim_model}"
+        return f"{self.settings.structured_model_provider}-claims:{self.settings.claim_model}"
 
     def _cache_key(
         self,
@@ -610,7 +610,11 @@ class AuditEngine:
         computed_overall = overall_score(modules, submission.audit_mode)
         if computed_overall is not None and score_cap is not None:
             computed_overall = min(computed_overall, score_cap)
-        parser_version = f"gemini-claims:{self.settings.claim_model}" if parse_result.parser_used == "gemini" else LOCAL_PARSER_VERSION
+        parser_version = (
+            f"{parse_result.parser_used}-claims:{self.settings.claim_model}"
+            if parse_result.parser_used in {"gemini", "openrouter"}
+            else LOCAL_PARSER_VERSION
+        )
         return AuditDetail(
             public_id=uuid4(),
             created_at=datetime.now(UTC),
@@ -659,7 +663,7 @@ class AuditEngine:
                 "currency_policy": "approved-treatment-edges-only",
                 "currency_registry_version": currency_registry_version,
                 "feedback_policy": "reviewed-revisions; no automatic retraining",
-                "parser_model": self.settings.claim_model if parse_result.parser_used == "gemini" else "local",
+                "parser_model": self.settings.claim_model if parse_result.parser_used in {"gemini", "openrouter"} else "local",
                 "assurance_policy_version": assurance_policy()["policy_version"],
                 "claim_graph_version": assurance_policy()["claim_graph_version"],
                 "completeness_policy": "static-pilot-landmark-set; no counter-authority retrieval",

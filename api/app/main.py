@@ -233,6 +233,8 @@ def health() -> HealthResponse:
         data_mode=settings.data_mode,
         supabase_configured=bool(settings.supabase_url and settings.supabase_secret_key),
         gemini_configured=bool(settings.gemini_api_key),
+        openrouter_configured=bool(settings.openrouter_api_key),
+        structured_model_provider=settings.structured_model_provider,
     )
 
 

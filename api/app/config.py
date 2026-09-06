@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     gemini_claim_model: str = Field(default="", validation_alias="GEMINI_CLAIM_MODEL")
     gemini_casemap_model: str = Field(default="gemini-3.5-flash-lite", validation_alias="GEMINI_CASEMAP_MODEL")
     gemini_timeout_seconds: float = Field(default=12.0, validation_alias="GEMINI_TIMEOUT_SECONDS")
+    openrouter_api_key: str = Field(default="", validation_alias="OPENROUTER_API_KEY")
+    openrouter_model: str = Field(
+        default="google/gemini-3.5-flash-lite",
+        validation_alias="OPENROUTER_MODEL",
+    )
     audit_retention_days: int = Field(default=30, ge=1, le=3650, validation_alias="PROOFMARK_AUDIT_RETENTION_DAYS")
     refresh_interval_hours: int = Field(default=24, ge=0, le=720, validation_alias="PROOFMARK_REFRESH_INTERVAL_HOURS")
 
@@ -31,7 +36,31 @@ class Settings(BaseSettings):
 
     @property
     def claim_model(self) -> str:
+        if self.openrouter_api_key:
+            return self.openrouter_model
         return self.gemini_claim_model or self.gemini_model
+
+    @property
+    def casemap_model(self) -> str:
+        if self.openrouter_api_key:
+            return self.openrouter_model
+        return self.gemini_casemap_model
+
+    @property
+    def annotation_model(self) -> str:
+        return self.openrouter_model if self.openrouter_api_key else self.gemini_model
+
+    @property
+    def structured_model_provider(self) -> str:
+        if self.openrouter_api_key:
+            return "openrouter"
+        if self.gemini_api_key:
+            return "gemini"
+        return "none"
+
+    @property
+    def has_structured_model_key(self) -> bool:
+        return self.structured_model_provider != "none"
 
 
 @lru_cache

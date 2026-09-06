@@ -77,7 +77,7 @@ export interface AuditedClaim {
   pinpoint: string | null
   proposition: string
   parser_confidence: number
-  parser_used: 'local' | 'gemini'
+  parser_used: 'local' | 'gemini' | 'openrouter'
   overgeneralisation_terms: string[]
   verdict: AuditVerdict
   rationale: string
@@ -132,7 +132,7 @@ export interface AuditSummary {
   public_id: string
   created_at: string
   status: 'queued' | 'running' | 'complete' | 'failed'
-  parser_used: 'local' | 'gemini'
+  parser_used: 'local' | 'gemini' | 'openrouter'
   input_preview: string
   summary_counts: Record<AuditVerdict, number>
   metrics: AuditMetrics

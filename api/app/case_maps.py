@@ -23,6 +23,7 @@ from app.models import (
     PractitionerFeedback,
 )
 from app.parsers import canonical_citation, normalise_citation
+from app.structured_model import generate_structured
 from app.taxonomy import PROPOSITIONS
 
 CASE_MAP_SCHEMA_VERSION = "proofmark-case-map-1.0"
@@ -120,9 +121,9 @@ class CaseMapAnnotator:
         self.settings = settings
 
     def annotate(self, authority: Authority, selected_passages: list[Passage]) -> tuple[list[CaseMapAnnotation], str]:
-        if self.settings.gemini_api_key:
+        if self.settings.has_structured_model_key:
             try:
-                return self._gemini(authority, selected_passages), self.settings.gemini_casemap_model
+                return self._gemini(authority, selected_passages), self.settings.casemap_model
             except Exception:
                 pass
         annotations = []
@@ -145,9 +146,6 @@ class CaseMapAnnotator:
         return annotations, "local-deterministic-fallback"
 
     def _gemini(self, authority: Authority, passages: list[Passage]) -> list[CaseMapAnnotation]:
-        from google import genai
-        from google.genai import types
-
         source = "\n".join(f"{item.paragraph_label} {item.text}" for item in passages)
         prompt = (
             "Create a draft Case Map using only the supplied paragraphs. Every supporting_quote must be an exact short "
@@ -157,22 +155,15 @@ class CaseMapAnnotator:
             "paragraphs contain them. Do not invent a category that is absent. "
             f"Controlled propositions: {sorted(PROPOSITIONS)}. Case: {authority.case_name} {authority.citation}.\n\n{source}"
         )
-        client = genai.Client(
-            api_key=self.settings.gemini_api_key,
-            http_options=types.HttpOptions(timeout=int(self.settings.gemini_timeout_seconds * 1000)),
+        parsed = generate_structured(
+            self.settings,
+            model=self.settings.casemap_model,
+            prompt=prompt,
+            response_schema=CaseMapAnnotations,
         )
-        response = client.models.generate_content(
-            model=self.settings.gemini_casemap_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=CaseMapAnnotations,
-                temperature=0,
-            ),
-        )
-        if not isinstance(response.parsed, CaseMapAnnotations):
-            raise ValueError("Gemini returned no schema-valid Case Map")
-        return response.parsed.annotations
+        if not isinstance(parsed, CaseMapAnnotations):
+            raise ValueError("Structured model returned no schema-valid Case Map")
+        return parsed.annotations
 
 
 class CaseMapService:

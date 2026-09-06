@@ -8,7 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 ParserMode = Literal["auto", "local", "gemini"]
-ParserUsed = Literal["local", "gemini"]
+ParserUsed = Literal["local", "gemini", "openrouter"]
 AuditMode = Literal["citation_only", "full"]
 AuditVerdict = Literal[
     "verified",
@@ -146,6 +146,7 @@ class RefreshRun(BaseModel):
     accepted_documents: int = 0
     rejected_documents: int = 0
     accepted_passages: int = 0
+    robots_policy_status: Literal["not_checked", "allowed", "not_published_404", "disallowed"] = "not_checked"
     fallback_reason: str | None = None
     active_corpus_version: str | None = None
     started_at: datetime | None = None
@@ -605,3 +606,5 @@ class HealthResponse(BaseModel):
     data_mode: str
     supabase_configured: bool
     gemini_configured: bool
+    openrouter_configured: bool = False
+    structured_model_provider: Literal["gemini", "openrouter", "none"] = "none"

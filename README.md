@@ -137,7 +137,8 @@ authority controlling requires lawyer review.
 
 ## Create the presentation snapshot
 
-Before the pitch, add GEMINI_API_KEY to api/.env and run this once while the
+Before the pitch, add either OPENROUTER_API_KEY (recommended) or GEMINI_API_KEY
+to api/.env and run this once while the
 official SG Courts/eLitigation site is available:
 
 ~~~powershell
@@ -148,7 +149,7 @@ uv run python -m app.refresh_cli
 It uses five taxonomy-derived search queries, a strict SG Courts allowlist,
 robots guidance, 1 request/second throttling, bounded retries, and a
 25-judgment ceiling. Each accepted source must have a matching neutral citation
-in its heading and numbered paragraphs. Gemini may select only extracted
+in its heading and numbered paragraphs. The optional structured model may select only extracted
 paragraph labels and controlled taxonomy values; ProofMark copies all displayed
 passage text from the official document.
 
@@ -159,6 +160,14 @@ during an audit. If network access, source terms, robots guidance, parsing, or
 Gemini annotation fails, ProofMark keeps the last successful snapshot and says
 that it is cached. Do not claim a live refresh succeeded when the page shows
 the fallback banner.
+
+With OpenRouter, use the following local-only values (the OpenRouter key takes
+precedence when both providers are configured):
+
+~~~ini
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=google/gemini-3.5-flash-lite
+~~~
 
 ## Freshness, re-audit, and retention
 

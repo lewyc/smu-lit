@@ -6,6 +6,7 @@ from typing import Protocol
 
 from app.config import Settings
 from app.models import GeminiClaims, ParsedClaim, ParserMode
+from app.structured_model import generate_structured
 from app.taxonomy import OVERGENERALISATION_TERMS, PROPOSITIONS, proposition_for
 
 CITATION_PATTERN = re.compile(
@@ -103,30 +104,19 @@ class GeminiClaimParser:
         self.settings = settings
 
     def parse(self, text: str) -> list[ParsedClaim]:
-        from google import genai
-        from google.genai import types
-
         prompt = (
             "Atomise this answer into legal claims. Extract only citations present in the "
             "answer. Choose exactly one proposition from this controlled taxonomy: "
             f"{sorted(PROPOSITIONS)}. Do not assess truth, support, or verdict.\n\n{text}"
         )
-        client = genai.Client(
-            api_key=self.settings.gemini_api_key,
-            http_options=types.HttpOptions(timeout=int(self.settings.gemini_timeout_seconds * 1000)),
-        )
-        response = client.models.generate_content(
+        parsed = generate_structured(
+            self.settings,
             model=self.settings.claim_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=GeminiClaims,
-                temperature=0,
-            ),
+            prompt=prompt,
+            response_schema=GeminiClaims,
         )
-        parsed = response.parsed
         if not isinstance(parsed, GeminiClaims) or not parsed.claims:
-            raise ValueError("Gemini returned no schema-valid claims")
+            raise ValueError("Structured model returned no schema-valid claims")
         claims: list[ParsedClaim] = []
         for item in parsed.claims:
             if item.proposition not in PROPOSITIONS:
@@ -138,7 +128,7 @@ class GeminiClaimParser:
             claims.append(
                 ParsedClaim(
                     **payload,
-                    parser_used="gemini",
+                    parser_used=self.settings.structured_model_provider,
                 )
             )
         return claims
@@ -155,14 +145,14 @@ def parse_with_mode(text: str, mode: ParserMode, settings: Settings) -> ParseRes
     local = LocalClaimParser()
     if mode == "local":
         return ParseResult(local.parse(text), "local", None)
-    if not settings.gemini_api_key:
-        reason = "Gemini API key is not configured; local parser used."
+    if not settings.has_structured_model_key:
+        reason = "A structured-model provider is not configured; local parser used."
         return ParseResult(local.parse(text), "local", reason if mode != "local" else None)
     try:
         claims = GeminiClaimParser(settings).parse(text)
-        return ParseResult(claims, "gemini", None)
+        return ParseResult(claims, settings.structured_model_provider, None)
     except Exception as exc:
         status_code = getattr(exc, "status_code", None)
         detail = f" status {status_code}" if status_code else ""
-        safe_reason = f"Gemini unavailable ({type(exc).__name__}{detail}); local parser used."
+        safe_reason = f"Structured model unavailable ({type(exc).__name__}{detail}); local parser used."
         return ParseResult(local.parse(text), "local", safe_reason)
