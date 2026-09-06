@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, vi } from 'vitest'
 import App from './App'
@@ -165,5 +165,21 @@ describe('ProofMark dashboard', () => {
     expect(screen.getByText(/Does the authority exist and is it correctly identified/i)).toBeInTheDocument()
     expect(screen.getByText(/Gates before weights/i)).toBeInTheDocument()
     expect(screen.getByText(/What each claim says supports it/i)).toBeInTheDocument()
+  })
+
+  it('distinguishes unavailable contextual review from a measured zero', async () => {
+    vi.spyOn(auditRepository, 'getAudit').mockResolvedValue({
+      ...savedDemoResult,
+      metrics: { ...savedDemoResult.metrics, citation_integrity: 80, grounded_coverage: 66.7, contextual_support: null },
+    })
+    render(
+      <MemoryRouter initialEntries={['/audits/fixture-audit']}>
+        <Routes><Route path="/audits/:id" element={<AuditDetailPage />} /></Routes>
+      </MemoryRouter>,
+    )
+    const metrics = await screen.findByRole('group', { name: /Tier 0 integrity metrics/i })
+    expect(within(metrics).getByRole('img', {
+      name: 'Citation integrity: 80%; Grounded coverage: 66.7%; Contextual support: Not assessed',
+    })).toBeInTheDocument()
   })
 })

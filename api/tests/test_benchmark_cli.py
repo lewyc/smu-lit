@@ -21,3 +21,7 @@ def test_release_benchmark_writes_gate_evidence(tmp_path) -> None:
     assert all(payload["release_gate"].values())
     stored = json.loads(output.read_text(encoding="utf-8"))
     assert stored["benchmark"]["error_count"] == 0
+    assert stored["benchmark"]["citation_identity_precision"] == 100
+    assert stored["benchmark"]["pinpoint_precision"] == 100
+    assert stored["benchmark"]["quote_accuracy"] == 100
+    assert stored["benchmark"]["gate_confusion_matrix"]

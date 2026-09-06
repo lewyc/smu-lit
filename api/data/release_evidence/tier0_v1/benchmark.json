@@ -1,16 +1,16 @@
 {
   "release": "tier0-v1-citation-integrity",
-  "generated_at": "2026-09-06T03:25:54.778322+00:00",
-  "working_tree_id": "07125a3-dirty",
+  "generated_at": "2026-09-06T05:16:38.640165+00:00",
+  "working_tree_id": "0ed129c-dirty",
   "benchmark": {
-    "fixture_count": 12,
-    "correct_count": 12,
+    "fixture_count": 15,
+    "correct_count": 15,
     "fixture_accuracy": 100.0,
-    "p50_latency_ms": 1.03,
-    "p95_latency_ms": 3.74,
+    "p50_latency_ms": 1.46,
+    "p95_latency_ms": 2.29,
     "performance_runs": 250,
     "error_count": 0,
-    "engine_version": "proofmark-rules-0.4.0",
+    "engine_version": "proofmark-rules-0.5.1",
     "corpus_version": "sg-employment-restraints-gold-fixtures.1",
     "source_provenance_rate": 0.0,
     "citation_heading_match_rate": 0.0,
@@ -156,13 +156,13 @@
     "fabrication_false_positive_count": 0,
     "confusion_matrix": {
       "verified": {
-        "verified": 4
+        "verified": 5
       },
       "context_review": {
         "context_review": 2
       },
       "unsupported": {
-        "unsupported": 4
+        "unsupported": 6
       },
       "out_of_scope": {
         "out_of_scope": 1
@@ -171,12 +171,54 @@
         "likely_fabricated": 1
       }
     },
-    "citation_identity_precision": 0.0,
-    "citation_identity_recall": 0.0,
-    "pinpoint_precision": 0.0,
-    "pinpoint_recall": 0.0,
-    "quote_accuracy": 0.0,
-    "gate_confusion_matrix": {},
+    "citation_identity_precision": 100.0,
+    "citation_identity_recall": 100.0,
+    "pinpoint_precision": 100.0,
+    "pinpoint_recall": 100.0,
+    "quote_accuracy": 100.0,
+    "gate_confusion_matrix": {
+      "identity": {
+        "matched": {
+          "matched": 11
+        },
+        "not_assessed": {
+          "not_assessed": 2
+        },
+        "court_code_mismatch": {
+          "court_code_mismatch": 1
+        }
+      },
+      "pinpoint": {
+        "not_supplied": {
+          "not_supplied": 9
+        },
+        "missing": {
+          "missing": 1
+        },
+        "wrong_proposition": {
+          "wrong_proposition": 2
+        },
+        "matched": {
+          "matched": 2
+        }
+      },
+      "quote": {
+        "not_present": {
+          "not_present": 11
+        },
+        "matched": {
+          "matched": 2
+        },
+        "mismatch": {
+          "mismatch": 1
+        }
+      },
+      "role": {
+        "unreviewed": {
+          "unreviewed": 14
+        }
+      }
+    },
     "operating_config_version": "veritas-operating-points-1.0",
     "latency_target_ms": null
   },

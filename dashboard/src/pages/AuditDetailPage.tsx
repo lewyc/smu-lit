@@ -1,7 +1,7 @@
 import { ArrowLeft, ExternalLink, FileText, Flag, Network, RefreshCw, Scale, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { ErrorPanel, LoadingPanel, PageHeader, VerdictBadge } from '../components/Common'
 import { auditRepository } from '../lib/repository'
 import type { AuditDetail } from '../types'
@@ -34,7 +34,11 @@ export function AuditDetailPage() {
     { name: 'Citation integrity', value: audit.metrics.citation_integrity },
     { name: 'Grounded coverage', value: audit.metrics.grounded_coverage },
     { name: 'Contextual support', value: audit.metrics.contextual_support },
-  ]
+  ].map((metric) => ({
+    ...metric,
+    chartValue: metric.value ?? 0,
+    displayValue: metric.value === null ? 'Not assessed' : `${metric.value}%`,
+  }))
   const modules = [
     ['Citation integrity', audit.metrics.citation_integrity_module],
     ['Propositional accuracy', audit.metrics.propositional_accuracy_module],
@@ -152,21 +156,24 @@ export function AuditDetailPage() {
         </section>
       )}
       <div className="detail-top-grid">
-        <div className="panel metric-chart">
+        <div className="panel metric-chart" role="group" aria-label="Tier 0 integrity metrics">
           <div><p className="eyebrow">Tier 0 metric</p><h2>Citation integrity</h2></div>
-          <div className="chart-wrap">
+          <div
+            className="chart-wrap"
+            role="img"
+            aria-label={metricData.map((metric) => `${metric.name}: ${metric.displayValue}`).join('; ')}
+          >
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={metricData} layout="vertical" margin={{ left: 8, right: 22 }}>
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis dataKey="name" type="category" width={128} axisLine={false} tickLine={false} tick={{ fill: '#42526b', fontSize: 12 }} />
-                <Tooltip formatter={(value) => [`${value}%`, 'Score']} cursor={{ fill: '#f3f6f8' }} />
-                <Bar dataKey="value" fill="#008d86" radius={[0, 4, 4, 0]} barSize={17}>
-                  <LabelList dataKey="value" position="right" formatter={(value: number) => `${value}%`} fill="#0b1f49" fontSize={12} fontWeight={700} />
+                <Bar dataKey="chartValue" fill="#008d86" radius={[0, 4, 4, 0]} barSize={17}>
+                  <LabelList dataKey="displayValue" position="right" fill="#0b1f49" fontSize={12} fontWeight={700} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="metric-note">This is a deterministic evidence-integrity indicator, not a probability that the legal answer is correct.</p>
+          <p className="metric-note">These are deterministic evidence-integrity indicators, not probabilities that the legal answer is correct. Not assessed means reviewed proposition or context labels are unavailable.</p>
         </div>
         <div className="panel provenance-panel">
           <p className="eyebrow">Provenance</p>

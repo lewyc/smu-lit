@@ -39,7 +39,7 @@ from app.parsers import normalise_citation, parse_with_mode
 from app.taxonomy import TAXONOMY_VERSION
 from app.veritas import VeritasDemoRunner, load_operating_config
 
-ENGINE_VERSION = "proofmark-rules-0.4.0"
+ENGINE_VERSION = "proofmark-rules-0.5.1"
 LOCAL_PARSER_VERSION = "local-claims.2"
 
 
@@ -624,8 +624,15 @@ class AuditEngine:
             counts.setdefault(verdict, 0)
         in_scope = [claim for claim in claims if claim.verdict != "out_of_scope"]
         cited = [claim for claim in in_scope if claim.citation]
-        resolved = [claim for claim in cited if claim.verdict not in {"likely_fabricated", "unverified"}]
-        grounded = [claim for claim in in_scope if any(item.relation == "supports" for item in claim.evidence)]
+        citation_valid = [
+            claim
+            for claim in cited
+            if claim.citation_identity_status == "matched"
+            and claim.pinpoint_status not in {"missing", "wrong_proposition"}
+            and claim.quote_status != "mismatch"
+        ]
+        grounded = [claim for claim in citation_valid if claim.evidence]
+        contextual_assessment_missing = any(claim.decision_rule_id == "PM-PROP-000" for claim in in_scope)
         weighted = sum(1 if claim.verdict == "verified" else 0.5 if claim.verdict == "context_review" else 0 for claim in in_scope)
         profile = context_profile(submission.original_question, submission.facts) if submission.audit_mode == "full" else None
         flags, modules = evaluate_framework(claims, submission.audit_mode, profile)
@@ -656,9 +663,13 @@ class AuditEngine:
             input_text=submission.answer,
             summary_counts=dict(counts),
             metrics=AuditMetrics(
-                citation_integrity=self._percent(len(resolved), len(cited)),
+                citation_integrity=self._percent(len(citation_valid), len(cited)),
                 grounded_coverage=self._percent(len(grounded), len(in_scope)),
-                contextual_support=round(100 * weighted / len(in_scope), 1) if in_scope else 0,
+                contextual_support=(
+                    None
+                    if contextual_assessment_missing
+                    else round(100 * weighted / len(in_scope), 1) if in_scope else 0
+                ),
                 citation_integrity_module=modules["citation"],
                 propositional_accuracy_module=modules["proposition"],
                 relevance_currency_module=modules["currency"],
@@ -737,20 +748,106 @@ class AuditEngine:
         if performance_runs is None:
             performance_runs = int(operating_config["measurement_policy"]["performance_runs"])
         gold_engine = AuditEngine(self.settings, GoldFixtureCorpusRepository())
-        fixtures = [
-            ("Employment restraints are prima facie unenforceable [2024] SGHC 29.", "verified", "proposition"),
-            ("A legitimate interest is required [2007] SGCA 53.", "verified", "proposition"),
-            ("All worldwide restraints are automatically void [2019] SGHC 96.", "context_review", "context"),
-            ("Singapore-wide restraints are always unreasonable [2010] SGCA 3.", "context_review", "context"),
-            ("Confidential information is always misused.", "unsupported", "citation"),
-            ("The PDPA permits publication of personal data.", "out_of_scope", "scope"),
-            ("The blue-pencil test does not permit a court to rewrite a restraint [2012] SGCA 39.", "verified", "proposition"),
-            ("Non-solicitation and non-dealing restrictions require separate scrutiny [2024] SGHC 94.", "verified", "proposition"),
-            ("A legitimate interest is required [2007] SGCA 53 at [999].", "unsupported", "citation"),
-            ("A legitimate interest is required [2007] SGHC 53.", "unsupported", "citation"),
-            ("A legitimate interest is required [2024] SGHC 29 at [18].", "unsupported", "proposition"),
+        fixture_specs = [
+            {
+                "answer": "Employment restraints are prima facie unenforceable [2024] SGHC 29.",
+                "verdict": "verified",
+                "module": "proposition",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGCA 53.",
+                "verdict": "verified",
+                "module": "proposition",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "All worldwide restraints are automatically void [2019] SGHC 96.",
+                "verdict": "context_review",
+                "module": "context",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "Singapore-wide restraints are always unreasonable [2010] SGCA 3.",
+                "verdict": "context_review",
+                "module": "context",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "Confidential information is always misused.",
+                "verdict": "unsupported",
+                "module": "citation",
+                "expected": ("not_assessed", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "The PDPA permits publication of personal data.",
+                "verdict": "out_of_scope",
+                "module": "scope",
+                "expected": ("not_assessed", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "The blue-pencil test does not permit a court to rewrite a restraint [2012] SGCA 39.",
+                "verdict": "verified",
+                "module": "proposition",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "Non-solicitation and non-dealing restrictions require separate scrutiny [2024] SGHC 94.",
+                "verdict": "verified",
+                "module": "proposition",
+                "expected": ("matched", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGCA 53 at [999].",
+                "verdict": "unsupported",
+                "module": "citation",
+                "expected": ("matched", "missing", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "A legitimate interest is required [2007] SGHC 53.",
+                "verdict": "unsupported",
+                "module": "citation",
+                "expected": ("court_code_mismatch", "not_supplied", "not_present", "unreviewed"),
+            },
+            {
+                "answer": "A legitimate interest is required [2024] SGHC 29 at [18].",
+                "verdict": "unsupported",
+                "module": "proposition",
+                "expected": ("matched", "wrong_proposition", "not_present", "unreviewed"),
+            },
+            {
+                "answer": (
+                    'The case states "Reasonableness is assessed both between the contracting parties and with '
+                    'reference to the public interest" [2007] SGCA 53 at [74].'
+                ),
+                "verdict": "verified",
+                "module": "citation",
+                "expected": ("matched", "matched", "matched", "unreviewed"),
+            },
+            {
+                "answer": '"An invented quotation" [2007] SGCA 53 at [74] establishes a legitimate proprietary interest.',
+                "verdict": "unsupported",
+                "module": "citation",
+                "expected": ("matched", "matched", "mismatch", "unreviewed"),
+            },
+            {
+                "answer": (
+                    'Every restraint lasts two years because "Reasonableness is assessed both between the contracting '
+                    'parties and with reference to the public interest" [2007] SGCA 53 at [74].'
+                ),
+                "verdict": "unsupported",
+                "module": "proposition",
+                "expected": ("matched", "wrong_proposition", "matched", "unreviewed"),
+            },
         ]
-        results = [gold_engine.audit(AuditSubmission(answer=text, parser_mode="local")).claims[0].verdict for text, _, _ in fixtures]
+        audited_claims = [
+            gold_engine.audit(AuditSubmission(answer=str(fixture["answer"]), parser_mode="local")).claims[0]
+            for fixture in fixture_specs
+        ]
+        fixtures = [
+            (str(fixture["answer"]), str(fixture["verdict"]), str(fixture["module"])) for fixture in fixture_specs
+        ]
+        results = [claim.verdict for claim in audited_claims]
         fabrication_demo = next(
             result for result in VeritasDemoRunner().run().results if result.demo_id == "demo_1"
         )
@@ -769,6 +866,48 @@ class AuditEngine:
         predicted_fabricated = [index for index, actual in enumerate(results) if actual == "likely_fabricated"]
         true_fabricated = [index for index in predicted_fabricated if fixtures[index][1] == "likely_fabricated"]
         fabricated_false_positives = len(predicted_fabricated) - len(true_fabricated)
+
+        detailed_fields = {
+            "identity": lambda claim: claim.citation_identity_status,
+            "pinpoint": lambda claim: claim.pinpoint_status,
+            "quote": lambda claim: claim.quote_status,
+            "role": lambda claim: claim.source_role_status,
+        }
+        expected_indexes = {"identity": 0, "pinpoint": 1, "quote": 2, "role": 3}
+        gate_confusion: dict[str, dict[str, dict[str, int]]] = {}
+        for field, getter in detailed_fields.items():
+            matrix: dict[str, dict[str, int]] = {}
+            expected_index = expected_indexes[field]
+            for claim, fixture in zip(audited_claims, fixture_specs, strict=True):
+                expected = str(fixture["expected"][expected_index])
+                actual = str(getter(claim))
+                bucket = matrix.setdefault(expected, {})
+                bucket[actual] = bucket.get(actual, 0) + 1
+            gate_confusion[field] = matrix
+
+        def detailed_accuracy(field: str) -> float:
+            getter = detailed_fields[field]
+            expected_index = expected_indexes[field]
+            return self._percent(
+                sum(
+                    int(getter(claim) == fixture["expected"][expected_index])
+                    for claim, fixture in zip(audited_claims, fixture_specs, strict=True)
+                ),
+                len(fixture_specs),
+            )
+
+        def binary_measure(field: str, positive: set[str]) -> tuple[float, float]:
+            getter = detailed_fields[field]
+            expected_index = expected_indexes[field]
+            predicted = {index for index, claim in enumerate(audited_claims) if getter(claim) in positive}
+            expected = {
+                index for index, fixture in enumerate(fixture_specs) if fixture["expected"][expected_index] in positive
+            }
+            true_positives = predicted & expected
+            return self._percent(len(true_positives), len(predicted)), self._percent(len(true_positives), len(expected))
+
+        identity_precision, identity_recall = binary_measure("identity", {"matched"})
+        pinpoint_precision, pinpoint_recall = binary_measure("pinpoint", {"matched"})
         latencies: list[float] = []
         errors = 0
         perf_input = AuditSubmission(answer=fixtures[0][0], parser_mode="local")
@@ -803,6 +942,12 @@ class AuditEngine:
             fabrication_precision=self._percent(len(true_fabricated), len(predicted_fabricated)),
             fabrication_false_positive_count=fabricated_false_positives,
             confusion_matrix=confusion,
+            citation_identity_precision=identity_precision,
+            citation_identity_recall=identity_recall,
+            pinpoint_precision=pinpoint_precision,
+            pinpoint_recall=pinpoint_recall,
+            quote_accuracy=detailed_accuracy("quote"),
+            gate_confusion_matrix=gate_confusion,
             operating_config_version=operating_config["config_version"],
             latency_target_ms=operating_config["measurement_policy"]["latency_targets_ms"]["tier_0"],
         )

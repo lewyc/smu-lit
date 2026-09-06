@@ -357,7 +357,7 @@ class ContextProfile(BaseModel):
 class AuditMetrics(BaseModel):
     citation_integrity: float = Field(ge=0, le=100)
     grounded_coverage: float = Field(ge=0, le=100)
-    contextual_support: float = Field(ge=0, le=100)
+    contextual_support: float | None = Field(default=None, ge=0, le=100)
     citation_integrity_module: ModuleScore | None = None
     propositional_accuracy_module: ModuleScore | None = None
     relevance_currency_module: ModuleScore | None = None

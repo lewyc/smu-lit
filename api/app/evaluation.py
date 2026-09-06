@@ -170,6 +170,7 @@ def evaluate_framework(
         len([c for c in in_scope if any(e.relation == "supports" for e in c.evidence)]),
         len(in_scope),
     )
+    proposition_review_missing = any(c.decision_rule_id == "PM-PROP-000" for c in in_scope)
     currency_known = [c for c in in_scope if c.currency_status != "not_verified"]
     currency_score = (
         _percentage(len([c for c in currency_known if c.currency_status == "current_reviewed"]), len(currency_known))
@@ -229,7 +230,16 @@ def evaluate_framework(
 
     modules = {
         "citation": ModuleScore(score=citation_score, weight=weights["citation"], assessed=True),
-        "proposition": ModuleScore(score=proposition_score, weight=weights["proposition"], assessed=True),
+        "proposition": ModuleScore(
+            score=None if proposition_review_missing else proposition_score,
+            weight=weights["proposition"],
+            assessed=not proposition_review_missing,
+            reason_not_assessed=(
+                "One or more matched passages lack a reviewed proposition annotation."
+                if proposition_review_missing
+                else None
+            ),
+        ),
         "currency": ModuleScore(
             score=currency_score if currency_known else None,
             weight=weights["currency"],

@@ -131,7 +131,7 @@ export interface ModuleScore {
 export interface AuditMetrics {
   citation_integrity: number
   grounded_coverage: number
-  contextual_support: number
+  contextual_support: number | null
   citation_integrity_module?: ModuleScore | null
   propositional_accuracy_module?: ModuleScore | null
   relevance_currency_module?: ModuleScore | null

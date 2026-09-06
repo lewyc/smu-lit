@@ -54,6 +54,38 @@ def automated_engine(snapshot_path: Path) -> AuditEngine:
     return AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
 
 
+def source_only_engine(snapshot_path: Path) -> AuditEngine:
+    corpus = ActiveCorpusRepository(snapshot_path)
+    corpus.activate(
+        [
+            Authority(
+                id="shopee-source-only",
+                citation="[2024] SGHC 29",
+                citation_key="2024SGHC29",
+                case_name="Shopee Singapore Pte Ltd v Lim Teck Yong",
+                court="Singapore HC",
+                decision_date="2024-02-01",
+                official_url="https://www.elitigation.sg/gd/s/2024_SGHC_29",
+                source_status="officially_sourced",
+                source_provenance="officially_sourced",
+                assessment_status="unannotated",
+                document_hash="b" * 64,
+                passages=[
+                    Passage(
+                        id="shopee-source-only-59",
+                        paragraph_label="[59]",
+                        text="There must be a legitimate proprietary interest.",
+                        supported_propositions=[],
+                        source_provenance="officially_sourced",
+                        assessment_status="unannotated",
+                    )
+                ],
+            )
+        ]
+    )
+    return AuditEngine(Settings(PROOFMARK_DATA_MODE="demo"), corpus)
+
+
 def test_neutral_citation_normalisation_is_tolerant() -> None:
     assert normalise_citation("[2024]   sghc   29") == "2024SGHC29"
     assert normalise_citation("[2007] SGCA 53") == "2007SGCA53"
@@ -106,6 +138,23 @@ def test_automatically_sourced_evidence_can_never_be_verified(tmp_path: Path) ->
     assert claim.verdict == "context_review"
     assert claim.evidence[0].officially_sourced
     assert claim.evidence[0].ai_supported
+
+
+def test_tier0_metrics_do_not_treat_missing_proposition_review_as_failure(tmp_path: Path) -> None:
+    audit = source_only_engine(tmp_path / "source-only-snapshot.json").audit(
+        AuditSubmission(
+            answer="A legitimate interest is required [2024] SGHC 29 at [59].",
+            parser_mode="local",
+        )
+    )
+
+    assert audit.claims[0].decision_rule_id == "PM-PROP-000"
+    assert audit.metrics.citation_integrity == 100
+    assert audit.metrics.grounded_coverage == 100
+    assert audit.metrics.contextual_support is None
+    assert audit.metrics.propositional_accuracy_module
+    assert not audit.metrics.propositional_accuracy_module.assessed
+    assert audit.metrics.propositional_accuracy_module.score is None
 
 
 def test_unknown_citation_is_not_called_fabricated_without_negative_check() -> None:
@@ -198,3 +247,9 @@ def test_benchmark_fixture_pack_is_exact() -> None:
     result = gold_engine().benchmark(performance_runs=3)
     assert result.fixture_accuracy == 100
     assert result.error_count == 0
+    assert result.citation_identity_precision == 100
+    assert result.citation_identity_recall == 100
+    assert result.pinpoint_precision == 100
+    assert result.pinpoint_recall == 100
+    assert result.quote_accuracy == 100
+    assert set(result.gate_confusion_matrix) == {"identity", "pinpoint", "quote", "role"}
