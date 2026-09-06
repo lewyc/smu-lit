@@ -19,7 +19,7 @@ export interface Passage {
   supported_propositions: string[]
   limitations: string[]
   source_provenance?: 'officially_sourced' | 'user_supplied' | 'gold_fixture' | 'rejected'
-  assessment_status?: 'ai_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
+  assessment_status?: 'ai_supported' | 'deterministically_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
   annotation_confidence?: number | null
   annotation_model?: string | null
   outcome_direction?: 'supports_enforcement' | 'limits_enforcement' | 'mixed' | 'unknown'
@@ -39,7 +39,7 @@ export interface Authority {
   official_url: string
   source_status: string
   source_provenance?: 'officially_sourced' | 'user_supplied' | 'gold_fixture' | 'rejected'
-  assessment_status?: 'ai_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
+  assessment_status?: 'ai_supported' | 'deterministically_supported' | 'human_reviewed' | 'gold_fixture' | 'unannotated' | 'rejected'
   source_host?: string | null
   discovery_query?: string | null
   retrieved_at?: string | null

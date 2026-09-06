@@ -120,6 +120,7 @@ export function AuthoritiesPage() {
                   <div className="source-badge-row">
                     {sourceBadge(authority, authority.source_provenance === 'officially_sourced' ? 'Official SG Courts source' : 'Benchmark gold fixture')}
                     {authority.assessment_status === 'ai_supported' && <span className="source-badge ai">AI annotation retained</span>}
+                    {authority.assessment_status === 'deterministically_supported' && <span className="source-badge muted">Deterministic taxonomy labels</span>}
                     <span className="source-badge muted">{authority.court_code ?? 'court unknown'} · tier {authority.court_tier ?? 'unrated'}</span>
                     <span className="source-badge warning">precedent: {authority.hierarchy_reviewed ? authority.precedential_status : 'awaiting legal review'}</span>
                     <span className="source-badge ai">Case Map: {caseMaps.find((item) => item.citation_key === authority.citation_key && item.status !== 'superseded')?.status ?? 'not generated'}</span>
@@ -135,6 +136,7 @@ export function AuthoritiesPage() {
                     <div className="source-badge-row">
                       {passage.source_provenance === 'officially_sourced' && <span className="source-badge official">Official SG Courts source</span>}
                       {passage.assessment_status === 'ai_supported' && <span className="source-badge ai">AI-supported proposition</span>}
+                      {passage.assessment_status === 'deterministically_supported' && <span className="source-badge muted">Deterministic taxonomy match</span>}
                       {passage.assessment_status === 'unannotated' && <span className="source-badge muted">No retained AI proposition</span>}
                     </div>
                     <div className="tag-row">{passage.supported_propositions.map((item) => <span key={item}>{item.replaceAll('_', ' ')}</span>)}</div>

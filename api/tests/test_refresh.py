@@ -8,6 +8,8 @@ from app.refresh import (
     CorpusRefreshService,
     EvidenceAnnotation,
     ExtractedJudgment,
+    GeminiEvidenceAnnotator,
+    JudgmentExtractor,
     SGCourtsConnector,
     SourceCandidate,
     TopicProfile,
@@ -127,6 +129,41 @@ def test_extractor_accepts_bare_numbered_paragraphs_but_not_citation_years(tmp_p
         def fetch(self, candidate: SourceCandidate) -> str:
             return html
 
+    class BareParagraphAnnotator:
+        def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
+            return [
+                EvidenceAnnotation(
+                    paragraph_label="[1]",
+                    proposition="legitimate_proprietary_interest",
+                    outcome_direction="unknown",
+                    confidence=0.6,
+                )
+            ]
+
+    corpus = ActiveCorpusRepository(tmp_path / "snapshot.json")
+    result = CorpusRefreshService(
+        corpus,
+        Settings(),
+        connector=BareParagraphConnector(),
+        annotator=BareParagraphAnnotator(),
+    ).refresh(new_refresh_run(limit=1))
+    assert result.status == "complete"
+    authority = corpus.resolve("2024SGHC29")
+    assert authority is not None
+    assert [item.paragraph_label for item in authority.passages] == ["[1]", "[2]"]
+    assert "[2007] SGCA 53" in authority.passages[0].text
+
+
+def test_deterministic_annotation_fallback_requires_exact_taxonomy_phrase() -> None:
+    judgment = JudgmentExtractor().extract(FixtureConnector().candidates[0], HTML)
+    annotations = GeminiEvidenceAnnotator(Settings(GEMINI_API_KEY="", OPENROUTER_API_KEY="")).annotate(judgment)
+    assert [(item.paragraph_label, item.proposition) for item in annotations] == [
+        ("[59]", "legitimate_proprietary_interest")
+    ]
+    assert annotations[0].annotation_method == "deterministic_taxonomy"
+
+
+def test_refresh_rejects_an_evidence_free_authority_snapshot(tmp_path: Path) -> None:
     class EmptyAnnotator:
         def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
             return []
@@ -135,14 +172,10 @@ def test_extractor_accepts_bare_numbered_paragraphs_but_not_citation_years(tmp_p
     result = CorpusRefreshService(
         corpus,
         Settings(),
-        connector=BareParagraphConnector(),
+        connector=FixtureConnector(),
         annotator=EmptyAnnotator(),
     ).refresh(new_refresh_run(limit=1))
-    assert result.status == "complete"
-    authority = corpus.resolve("2024SGHC29")
-    assert authority is not None
-    assert [item.paragraph_label for item in authority.passages] == ["[1]", "[2]"]
-    assert "[2007] SGCA 53" in authority.passages[0].text
+    assert result.status == "fallback"
 
 
 def test_official_discovery_parses_html_deduplicates_and_keeps_allowlist() -> None:

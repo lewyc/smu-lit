@@ -20,7 +20,14 @@ AuditVerdict = Literal[
 ]
 EvidenceRelation = Literal["supports", "limits", "contradicts", "unresolved"]
 SourceProvenance = Literal["officially_sourced", "user_supplied", "gold_fixture", "rejected"]
-AssessmentStatus = Literal["ai_supported", "human_reviewed", "gold_fixture", "unannotated", "rejected"]
+AssessmentStatus = Literal[
+    "ai_supported",
+    "deterministically_supported",
+    "human_reviewed",
+    "gold_fixture",
+    "unannotated",
+    "rejected",
+]
 PassageSourceRole = Literal[
     "unreviewed",
     "judicial_holding",

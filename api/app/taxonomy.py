@@ -29,7 +29,7 @@ PHRASE_MAP: list[tuple[tuple[str, ...], str]] = [
     (("confidential information", "trade secret"), "confidential_information"),
     (("customer connection", "customer relationship", "goodwill"), "customer_connections"),
     (("stable trained workforce", "trained workforce", "employee stability"), "stable_trained_workforce"),
-    (("geographic", "worldwide", "singapore-wide", "territorial"), "geographic_scope"),
+    (("geographic", "worldwide", "singapore-wide", "whole of singapore", "territorial"), "geographic_scope"),
     (("duration", "year", "month", "temporal"), "duration_scope"),
     (("activity", "business scope", "competing business"), "activity_scope"),
     (("public interest", "public policy"), "reasonableness_public_interest"),

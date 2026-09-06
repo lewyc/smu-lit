@@ -351,6 +351,7 @@ export function AuditDetailPage() {
                   <div className="source-badge-row evidence-badges">
                     {evidence.officially_sourced && <span className="source-badge official">Official SG Courts source</span>}
                     {evidence.ai_supported && <span className="source-badge ai">AI-supported proposition</span>}
+                    {evidence.passage.assessment_status === 'deterministically_supported' && <span className="source-badge muted">Deterministic taxonomy match</span>}
                     {evidence.passage.source_role_reviewed && <span className="source-badge muted">Reviewed role: {evidence.passage.source_role?.replaceAll('_', ' ')}</span>}
                     {evidence.passage.annotation_disagrees && <span className="source-badge warning">Taxonomy disagreement · lawyer review</span>}
                     {!evidence.officially_sourced && !evidence.ai_supported && <span className="source-badge muted">Saved demonstration evidence</span>}

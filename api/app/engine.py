@@ -76,12 +76,15 @@ class EvidenceMatcher:
             passage = authority.passages[int(index)]
             supports = claim.proposition in passage.supported_propositions and passage.assessment_status in {
                 "ai_supported",
+                "deterministically_supported",
                 "human_reviewed",
                 "gold_fixture",
             }
             relation = "supports" if supports else "unresolved"
             explanation = (
-                "Exact official paragraph selected for this controlled proposition."
+                "Exact official paragraph matched to this controlled proposition by the deterministic taxonomy."
+                if passage.assessment_status == "deterministically_supported" and supports
+                else "Exact official paragraph selected for this controlled proposition."
                 if passage.source_provenance == "officially_sourced" and supports
                 else "Gold-fixture passage explicitly supports this controlled proposition."
                 if supports
@@ -358,7 +361,9 @@ class VerdictEngine:
 
         if authority.source_provenance != "gold_fixture":
             provenance_label = (
-                "officially sourced and AI-supported"
+                "officially sourced and deterministically taxonomy-matched"
+                if any(item.passage.assessment_status == "deterministically_supported" for item in supporting)
+                else "officially sourced and AI-supported"
                 if authority.source_provenance == "officially_sourced"
                 else "user supplied and not independently validated"
             )

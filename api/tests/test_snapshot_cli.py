@@ -66,3 +66,36 @@ def test_certified_snapshot_rejects_missing_hash_or_role_review(tmp_path: Path) 
     snapshot.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(SnapshotValidationError, match="document hash"):
         validate_snapshot(snapshot, require_certified=True)
+
+
+def test_runtime_loader_rejects_a_citation_as_case_name_and_duplicate_year_paragraph(tmp_path: Path) -> None:
+    snapshot = _snapshot(tmp_path / "frozen_snapshot.json")
+    payload = json.loads(snapshot.read_text(encoding="utf-8"))
+    authority = payload["authorities"][0]
+    authority["case_name"] = authority["citation"]
+    authority["passages"][0]["paragraph_label"] = "[2024]"
+    payload["metadata"]["content_hash"] = hashlib.sha256(
+        json.dumps(payload["authorities"], sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    snapshot.write_text(json.dumps(payload), encoding="utf-8")
+
+    corpus = ActiveCorpusRepository(snapshot)
+    assert corpus.is_ready is False
+    assert corpus.list_authorities() == []
+    assert "case name is only a citation" in (corpus.load_error or "")
+
+
+def test_runtime_loader_rejects_duplicate_passage_ids(tmp_path: Path) -> None:
+    snapshot = _snapshot(tmp_path / "frozen_snapshot.json")
+    payload = json.loads(snapshot.read_text(encoding="utf-8"))
+    duplicate = dict(payload["authorities"][0]["passages"][0])
+    duplicate["paragraph_label"] = "[2]"
+    payload["authorities"][0]["passages"].append(duplicate)
+    payload["metadata"]["passage_count"] += 1
+    payload["metadata"]["content_hash"] = hashlib.sha256(
+        json.dumps(payload["authorities"], sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    snapshot.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(SnapshotValidationError, match="duplicate passage id"):
+        validate_snapshot(snapshot)

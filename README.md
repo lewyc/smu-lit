@@ -161,6 +161,16 @@ Gemini annotation fails, ProofMark keeps the last successful snapshot and says
 that it is cached. Do not claim a live refresh succeeded when the page shows
 the fallback banner.
 
+At startup the API validates snapshot counts and hashes, canonical case
+identity, official HTTPS hosts, citation/date consistency, unique authority and
+paragraph identifiers, monotonically ordered paragraph labels, provenance, and taxonomy
+values. An invalid or missing runtime snapshot leaves `/api/v1/health` in
+`degraded` state and audit/Case Map endpoints return `503`; benchmark gold
+summaries are never substituted for missing official judgment text. A
+source-only snapshot is usable for citation and pinpoint existence checks, but
+propositional conclusions remain `unverified` until paragraph annotations are
+generated and reviewed.
+
 With OpenRouter, use the following local-only values (the OpenRouter key takes
 precedence when both providers are configured):
 

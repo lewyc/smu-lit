@@ -8,7 +8,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from threading import RLock
-from typing import Protocol
+from typing import Literal, Protocol
 from urllib import robotparser
 from urllib.parse import quote_plus, urljoin, urlparse
 from uuid import uuid4
@@ -27,7 +27,7 @@ from app.models import (
 )
 from app.parsers import canonical_citation, normalise_citation
 from app.structured_model import generate_structured
-from app.taxonomy import PROPOSITIONS, proposition_for
+from app.taxonomy import PHRASE_MAP, PROPOSITIONS, proposition_for
 
 EXTRACTOR_VERSION = "sgcourts-html-extractor.1"
 ANNOTATOR_VERSION = "evidence-annotator.1"
@@ -370,6 +370,7 @@ class EvidenceAnnotation(BaseModel):
     limitations: list[str] = Field(default_factory=list, max_length=4)
     outcome_direction: OutcomeDirection
     confidence: float = Field(ge=0, le=1)
+    annotation_method: Literal["structured_model", "deterministic_taxonomy"] = "structured_model"
 
 
 class GeminiEvidenceAnnotations(BaseModel):
@@ -381,15 +382,25 @@ class EvidenceAnnotator(Protocol):
 
 
 class GeminiEvidenceAnnotator:
-    """Gemini may select labels and taxonomy values, never provide judgment text."""
+    """A model proposes labels; exact taxonomy phrases provide a conservative fallback."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
     def annotate(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
-        if not self.settings.has_structured_model_key:
-            raise RuntimeError("No structured-model API key is configured")
+        if self.settings.has_structured_model_key:
+            try:
+                annotations = self._from_structured_model(judgment)
+                if annotations:
+                    return annotations
+            except Exception:
+                # A model outage or an empty schema-valid result must not activate
+                # an evidence-free snapshot. The bounded deterministic pass below
+                # still requires exact taxonomy phrases in official text.
+                pass
+        return self._from_deterministic_taxonomy(judgment)
 
+    def _from_structured_model(self, judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
         candidates = []
         for paragraph in judgment.paragraphs:
             proposition, confidence = proposition_for(paragraph.text)
@@ -419,8 +430,34 @@ class GeminiEvidenceAnnotator:
                 raise ValueError("Gemini selected a paragraph not extracted from this judgment")
             if annotation.proposition not in PROPOSITIONS:
                 raise ValueError("Gemini returned a proposition outside the controlled taxonomy")
-            cleaned.append(annotation)
+            cleaned.append(annotation.model_copy(update={"annotation_method": "structured_model"}))
         return cleaned
+
+    @staticmethod
+    def _from_deterministic_taxonomy(judgment: ExtractedJudgment) -> list[EvidenceAnnotation]:
+        """Create bounded, review-only labels from exact controlled-taxonomy phrases."""
+        annotations: list[EvidenceAnnotation] = []
+        for paragraph in judgment.paragraphs:
+            lowered = paragraph.text.casefold()
+            propositions = {
+                proposition
+                for phrases, proposition in PHRASE_MAP
+                if proposition != "outside_corpus_scope" and any(phrase in lowered for phrase in phrases)
+            }
+            for proposition in sorted(propositions):
+                annotations.append(
+                    EvidenceAnnotation(
+                        paragraph_label=paragraph.label,
+                        proposition=proposition,
+                        limitations=["Deterministic taxonomy phrase match; lawyer review required."],
+                        outcome_direction="unknown",
+                        confidence=0.55,
+                        annotation_method="deterministic_taxonomy",
+                    )
+                )
+                if len(annotations) >= 40:
+                    return annotations
+        return annotations
 
 
 class CorpusRefreshService:
@@ -456,6 +493,8 @@ class CorpusRefreshService:
                 try:
                     judgment = self.extractor.extract(candidate, self.connector.fetch(candidate))
                     annotations = self.annotator.annotate(judgment)
+                    if not annotations:
+                        raise ValueError("No proposition-linked evidence annotations were retained for this judgment")
                     extracted_labels = {paragraph.label for paragraph in judgment.paragraphs}
                     if any(item.paragraph_label not in extracted_labels for item in annotations):
                         raise ValueError("Annotator selected a paragraph not extracted from this judgment")
@@ -463,7 +502,9 @@ class CorpusRefreshService:
                 except Exception:
                     # Individual fetch/extract/annotation failure must not contaminate the last snapshot.
                     run.rejected_documents += 1
-            if not authorities:
+            if not authorities or not any(
+                passage.supported_propositions for authority in authorities for passage in authority.passages
+            ):
                 raise RuntimeError("No source passed provenance and annotation gates")
             metadata = self.corpus.activate(authorities, profile_version=profile.version)
             run.status = "complete"
@@ -497,6 +538,14 @@ class CorpusRefreshService:
             local_proposition, _ = proposition_for(paragraph.text)
             annotations_for_label = [item for item in selected if item.proposition != "outside_corpus_scope"]
             supported = sorted({item.proposition for item in annotations_for_label})
+            methods = {item.annotation_method for item in annotations_for_label}
+            assessment_status = (
+                "ai_supported"
+                if "structured_model" in methods
+                else "deterministically_supported"
+                if supported
+                else "unannotated"
+            )
             disagreement = bool(supported and local_proposition != "outside_corpus_scope" and local_proposition not in supported)
             passages.append(
                 Passage(
@@ -506,9 +555,15 @@ class CorpusRefreshService:
                     supported_propositions=supported,
                     limitations=[limit for item in selected for limit in item.limitations],
                     source_provenance="officially_sourced",
-                    assessment_status="ai_supported" if supported else "unannotated",
+                    assessment_status=assessment_status,
                     annotation_confidence=max((item.confidence for item in selected), default=None),
-                    annotation_model=self.settings.annotation_model if selected else None,
+                    annotation_model=(
+                        self.settings.annotation_model
+                        if "structured_model" in methods
+                        else "deterministic-taxonomy-2.0"
+                        if supported
+                        else None
+                    ),
                     outcome_direction=selected[0].outcome_direction if selected else "unknown",
                     annotation_disagrees=disagreement,
                 )
@@ -523,7 +578,11 @@ class CorpusRefreshService:
             official_url=judgment.candidate.url,
             source_status="officially_sourced",
             source_provenance="officially_sourced",
-            assessment_status="ai_supported" if annotations else "unannotated",
+            assessment_status=(
+                "ai_supported"
+                if any(item.annotation_method == "structured_model" for item in annotations)
+                else "deterministically_supported"
+            ),
             source_host=urlparse(judgment.candidate.url).hostname,
             discovery_query=judgment.candidate.discovery_query,
             retrieved_at=judgment.retrieved_at,

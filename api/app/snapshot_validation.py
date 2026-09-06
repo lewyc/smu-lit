@@ -112,6 +112,7 @@ def _validate_authority(
 
     authority_year = int(authority.citation[1:5])
     labels: set[str] = set()
+    previous_paragraph: int | None = None
     for passage in authority.passages:
         match = PARAGRAPH_LABEL.fullmatch(passage.paragraph_label)
         if not match:
@@ -119,6 +120,12 @@ def _validate_authority(
                 f"{authority.citation}: invalid paragraph label {passage.paragraph_label!r}"
             )
         numbers = [int(value) for value in match.groups() if value is not None]
+        if len(numbers) != 1 or (previous_paragraph is not None and numbers[0] <= previous_paragraph):
+            raise SnapshotValidationError(
+                f"{authority.citation}: paragraph labels must be unique and strictly increasing; "
+                f"found {passage.paragraph_label} after [{previous_paragraph}]"
+            )
+        previous_paragraph = numbers[0]
         if authority_year in numbers:
             raise SnapshotValidationError(
                 f"{authority.citation}: neutral-citation year {passage.paragraph_label} was misread as a paragraph"
