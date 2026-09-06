@@ -37,6 +37,11 @@ describe('ProofMark dashboard', () => {
   })
 
   it('reveals contextual inputs only when full mode is selected', async () => {
+    vi.spyOn(auditRepository, 'getCandidateIndexStatus').mockResolvedValue({
+      status: 'ready', reason: null, catalogue_version: 'v1', catalogue_hash: 'a'.repeat(64),
+      index_version: 'proofmark-candidate-index.1', index_hash: 'b'.repeat(64),
+      retrieval_version: 'proofmark-hybrid-tfidf-svd.1', authority_count: 25, chunk_count: 40,
+    })
     render(
       <MemoryRouter initialEntries={['/audits/new']}>
         <App />
@@ -47,6 +52,36 @@ describe('ProofMark dashboard', () => {
     fireEvent.change(auditDepth, { target: { value: 'full' } })
     expect(screen.getByPlaceholderText(/What question was the AI asked/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/Duration, territory/i)).toBeInTheDocument()
+    expect(await screen.findByText(/25 approved authorities/i)).toBeInTheDocument()
+  })
+
+  it('renders candidate authorities as separate non-gating research leads', async () => {
+    vi.spyOn(auditRepository, 'getAudit').mockResolvedValue({
+      ...savedDemoResult,
+      candidate_search: {
+        status: 'complete', unavailable_reason: null, catalogue_version: 'v1', catalogue_hash: 'a'.repeat(64),
+        index_version: 'proofmark-candidate-index.1', index_hash: 'b'.repeat(64),
+        retrieval_version: 'proofmark-hybrid-tfidf-svd.1', searched_claim_count: 2, result_count: 1,
+        limitation_statement: 'Candidate retrieval is a bounded research aid.',
+        candidates: [{
+          rank: 1, citation: '[2024] SGHC 29', citation_key: '2024SGHC29', case_name: 'Shopee Singapore Pte Ltd v Lim Teck Yong',
+          court: 'High Court', official_url: 'https://www.elitigation.sg/gd/s/2024_SGHC_29', matched_claim_orders: [1],
+          matched_propositions: ['legitimate_proprietary_interest'], paragraphs: [{ paragraph_label: '[59]', text: 'Reviewed official paragraph excerpt.' }],
+          limitations: ['Fact-sensitive review is required.'], source_role: 'holding', treatment_status: 'not_verified', lexical_score: 0.7,
+          dense_score: 0.65, combined_score: 0.68, case_map_version: 1,
+          match_rationale: 'The approved catalogue matched the supplied context; this is not a support finding.',
+          review_label: 'Potentially relevant authority — requires source and treatment review',
+        }],
+      },
+    })
+    render(
+      <MemoryRouter initialEntries={['/audits/fixture-audit']}>
+        <Routes><Route path="/audits/:id" element={<AuditDetailPage />} /></Routes>
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('region', { name: /Potentially relevant authorities/i })).toBeInTheDocument()
+    expect(screen.getByText('Potentially relevant authority — requires source and treatment review')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open official judgment/i })).toHaveAttribute('href', 'https://www.elitigation.sg/gd/s/2024_SGHC_29')
   })
 
   it('exposes the Case Map human-review workbench', async () => {

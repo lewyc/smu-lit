@@ -10,6 +10,7 @@ import type {
   RefreshRun,
   CaseMapAnnotation,
   CaseMapDetail,
+  CandidateIndexStatus,
   FeedbackSubmission,
   PractitionerFeedback,
   HumanReviewDecision,
@@ -161,6 +162,10 @@ export class ApiAuditRepository implements AuditRepository {
 
   getLatestCorpusRefresh(): Promise<RefreshRun | null> {
     return request('/api/v1/corpora/refreshes/latest')
+  }
+
+  getCandidateIndexStatus(): Promise<CandidateIndexStatus> {
+    return request('/api/v1/candidate-index/status')
   }
 
   async loadDemoAnswer(): Promise<string> {

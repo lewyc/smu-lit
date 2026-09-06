@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.assurance import assurance_policy
+from app.candidate_retrieval import CandidateAuthorityIndex
 from app.case_maps import CaseMapService, LocalFeedbackRepository
 from app.config import get_settings
 from app.corpus import DEMO_ANSWER, ActiveCorpusRepository
@@ -22,6 +23,7 @@ from app.models import (
     AuditSubmission,
     AuditSummary,
     BenchmarkResult,
+    CandidateIndexStatus,
     CaseMapDetail,
     CaseMapGenerateRequest,
     CorpusRefreshRequest,
@@ -57,7 +59,8 @@ from app.veritas import (
 
 settings = get_settings()
 active_corpus = ActiveCorpusRepository()
-engine = AuditEngine(settings, active_corpus)
+candidate_index = CandidateAuthorityIndex.load_or_unavailable()
+engine = AuditEngine(settings, active_corpus, candidate_index)
 local_audits = LocalAuditRepository()
 
 
@@ -267,6 +270,11 @@ def corpus_freshness():
     }
 
 
+@app.get("/api/v1/candidate-index/status", response_model=CandidateIndexStatus)
+def candidate_index_status() -> CandidateIndexStatus:
+    return candidate_index.status()
+
+
 @app.get("/api/v1/authorities")
 def authorities():
     _require_runtime_corpus()
@@ -358,11 +366,12 @@ def re_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]) -> 
             status_code=410,
             detail="This audit's retained input has expired and cannot be re-audited.",
         )
+    preserve_full = prior.audit_mode == "full" and bool((prior.original_question or "").strip()) and bool((prior.facts or "").strip())
     submission = AuditSubmission(
         answer=prior.input_text,
-        # Historical full audits remain readable, but a re-audit is a new Tier 0
-        # citation-only result rather than an implicit Tier 1/2 evaluation.
-        audit_mode="citation_only",
+        audit_mode="full" if preserve_full else "citation_only",
+        original_question=prior.original_question if preserve_full else None,
+        facts=prior.facts if preserve_full else None,
         parser_mode=prior.parser_requested,
         persist=settings.data_mode == "supabase",
         reuse_cache=False,
@@ -370,7 +379,7 @@ def re_audit(public_id: UUID, token: Annotated[str | None, Depends(_token)]) -> 
     currency_statuses, currency_registry_version = _currency_context(token)
     audit = engine.audit(submission, currency_statuses, currency_registry_version)
     audit.re_audited_from_public_id = public_id
-    if prior.audit_mode == "full":
+    if prior.audit_mode == "full" and not preserve_full:
         audit.evaluation_provenance["legacy_context_not_reapplied"] = True
     return repository.save(audit)
 

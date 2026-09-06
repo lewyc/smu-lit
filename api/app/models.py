@@ -335,6 +335,63 @@ class CompletenessSearch(BaseModel):
     measured_accuracy: float | None = None
 
 
+class CandidateParagraph(BaseModel):
+    paragraph_label: str
+    text: str
+
+
+class CandidateAuthorityLead(BaseModel):
+    rank: int = Field(ge=1, le=5)
+    citation: str
+    citation_key: str
+    case_name: str
+    court: str
+    official_url: str
+    matched_claim_orders: list[int] = Field(min_length=1)
+    matched_propositions: list[str] = Field(default_factory=list)
+    paragraphs: list[CandidateParagraph] = Field(min_length=1)
+    limitations: list[str] = Field(default_factory=list)
+    source_role: AuthorityRole
+    treatment_status: Literal["current_reviewed", "negative_treatment", "not_verified"]
+    lexical_score: float = Field(ge=0, le=1)
+    dense_score: float = Field(ge=0, le=1)
+    combined_score: float = Field(ge=0, le=1)
+    case_map_version: int = Field(ge=1)
+    match_rationale: str
+    review_label: Literal["Potentially relevant authority — requires source and treatment review"] = (
+        "Potentially relevant authority — requires source and treatment review"
+    )
+
+
+class CandidateSearchResult(BaseModel):
+    status: Literal["not_requested", "complete", "unavailable"] = "not_requested"
+    unavailable_reason: str | None = None
+    catalogue_version: str | None = None
+    catalogue_hash: str | None = None
+    index_version: str | None = None
+    index_hash: str | None = None
+    retrieval_version: str | None = None
+    searched_claim_count: int = 0
+    result_count: int = 0
+    candidates: list[CandidateAuthorityLead] = Field(default_factory=list)
+    limitation_statement: str = (
+        "Candidate retrieval is a bounded research aid. It does not establish legal relevance, "
+        "authoritative weight, current treatment, completeness, or legal correctness."
+    )
+
+
+class CandidateIndexStatus(BaseModel):
+    status: Literal["ready", "unavailable"]
+    reason: str | None = None
+    catalogue_version: str | None = None
+    catalogue_hash: str | None = None
+    index_version: str | None = None
+    index_hash: str | None = None
+    retrieval_version: str | None = None
+    authority_count: int = 0
+    chunk_count: int = 0
+
+
 class ContextProfile(BaseModel):
     duration: str | None = None
     geographic_scope: str | None = None
@@ -376,9 +433,11 @@ class AuditSubmission(BaseModel):
     reuse_cache: bool = True
 
     @model_validator(mode="after")
-    def require_question_for_full_mode(self) -> AuditSubmission:
+    def require_context_for_full_mode(self) -> AuditSubmission:
         if self.audit_mode == "full" and not (self.original_question or "").strip():
             raise ValueError("Full audit mode requires the original legal question")
+        if self.audit_mode == "full" and not (self.facts or "").strip():
+            raise ValueError("Full audit mode requires factual context for candidate-authority retrieval")
         return self
 
 
@@ -427,6 +486,7 @@ class AuditDetail(AuditSummary):
     score_gates: list[ScoreGate] = Field(default_factory=list)
     score_cap: float | None = Field(default=None, ge=0, le=100)
     completeness_searches: list[CompletenessSearch] = Field(default_factory=list)
+    candidate_search: CandidateSearchResult = Field(default_factory=CandidateSearchResult)
 
 
 class CaseMapFieldProvenance(BaseModel):

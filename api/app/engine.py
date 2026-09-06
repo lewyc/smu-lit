@@ -21,6 +21,7 @@ from app.assurance import (
     failure_findings,
     score_gates,
 )
+from app.candidate_retrieval import CandidateAuthorityIndex
 from app.config import Settings
 from app.corpus import ActiveCorpusRepository, CorpusRepository, GoldFixtureCorpusRepository
 from app.evaluation import context_profile, evaluate_framework, overall_score
@@ -39,7 +40,7 @@ from app.parsers import normalise_citation, parse_with_mode
 from app.taxonomy import TAXONOMY_VERSION
 from app.veritas import VeritasDemoRunner, load_operating_config
 
-ENGINE_VERSION = "proofmark-rules-0.4.0"
+ENGINE_VERSION = "proofmark-rules-0.5.0"
 LOCAL_PARSER_VERSION = "local-claims.2"
 
 
@@ -525,10 +526,16 @@ class HandoffBuilder:
 
 
 class AuditEngine:
-    def __init__(self, settings: Settings, corpus: CorpusRepository | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        corpus: CorpusRepository | None = None,
+        candidate_index: CandidateAuthorityIndex | None = None,
+    ) -> None:
         self.settings = settings
         self.corpus = corpus or ActiveCorpusRepository()
         self.verdicts = VerdictEngine(self.corpus, EvidenceMatcher(self.corpus))
+        self.candidate_index = candidate_index or CandidateAuthorityIndex.load_or_unavailable()
 
     def replace_corpus(self, corpus: CorpusRepository) -> None:
         """Install warmed immutable vectors after a successful refresh."""
@@ -564,7 +571,17 @@ class AuditEngine:
 
     def apply_freshness(self, audit: AuditDetail, currency_registry_version: str = "currency-none") -> AuditDetail:
         metadata = self.corpus.get_metadata()
-        stale = audit.corpus_version != metadata.version or audit.currency_registry_version != currency_registry_version
+        candidate_status = self.candidate_index.status()
+        candidate_stale = (
+            audit.audit_mode == "full"
+            and candidate_status.status == "ready"
+            and audit.candidate_search.index_hash != candidate_status.index_hash
+        )
+        stale = (
+            audit.corpus_version != metadata.version
+            or audit.currency_registry_version != currency_registry_version
+            or candidate_stale
+        )
         return audit.model_copy(
             update={
                 "is_stale": stale,
@@ -598,6 +615,7 @@ class AuditEngine:
             "taxonomy_version": TAXONOMY_VERSION,
             "currency_registry_version": currency_registry_version,
             "assurance_policy_version": assurance_policy()["policy_version"],
+            **self.candidate_index.cache_identity(submission.audit_mode),
         }
         return hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -641,6 +659,12 @@ class AuditEngine:
             f"{parse_result.parser_used}-claims:{self.settings.claim_model}"
             if parse_result.parser_used in {"gemini", "openrouter"}
             else LOCAL_PARSER_VERSION
+        )
+        candidate_search = self.candidate_index.search(
+            audit_mode=submission.audit_mode,
+            original_question=submission.original_question,
+            facts=submission.facts,
+            claims=claims,
         )
         return AuditDetail(
             public_id=uuid4(),
@@ -693,7 +717,13 @@ class AuditEngine:
                 "parser_model": self.settings.claim_model if parse_result.parser_used in {"gemini", "openrouter"} else "local",
                 "assurance_policy_version": assurance_policy()["policy_version"],
                 "claim_graph_version": assurance_policy()["claim_graph_version"],
-                "completeness_policy": "static-pilot-landmark-set; no counter-authority retrieval",
+                "completeness_policy": "static-pilot-landmark-set; candidate retrieval is separately non-gating",
+                "candidate_search_status": candidate_search.status,
+                "candidate_catalogue_version": candidate_search.catalogue_version,
+                "candidate_catalogue_hash": candidate_search.catalogue_hash,
+                "candidate_index_version": candidate_search.index_version,
+                "candidate_index_hash": candidate_search.index_hash,
+                "candidate_retrieval_version": candidate_search.retrieval_version,
             },
             assurance_policy_version=str(assurance_policy()["policy_version"]),
             assurance_questions=assurance_questions(claims, flags, searches, submission.audit_mode),
@@ -702,6 +732,7 @@ class AuditEngine:
             score_gates=gates,
             score_cap=score_cap,
             completeness_searches=searches,
+            candidate_search=candidate_search,
         )
 
     @staticmethod

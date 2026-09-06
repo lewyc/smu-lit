@@ -9,8 +9,9 @@ case-law database.
 
 ```text
 Official snapshot -> paragraph-anchored Case Map draft -> lawyer approval
-Pasted AI answer + optional question/facts -> parsed legal claims
+Pasted AI answer + required question/facts in Full mode -> parsed legal claims
 -> citation, pinpoint, modality, context, currency and omission checks
+-> optional approved-catalogue hybrid candidate search (non-gating)
 -> Q1 existence -> Q2 fidelity -> Q3 legal significance -> Q4 completeness
 -> gates before configurable weights -> lawyer handoff and feedback review
 -> optional Supabase persistence
@@ -51,9 +52,10 @@ durable local Tier 3 queue. Two different qualified-lawyer decisions are
 required before an item can become a gold candidate; the application never
 generates a human decision.
 
-Use **Citation only** for the original answer-only flow. Use **Full** to add the
-original question and facts; this enables contextual distinctions, issue
-omissions, balance prompts, and the weighted four-module score. A total is
+Use **Citation only** for the original answer-only flow. Use **Full** with both
+the original question and factual context; this enables contextual distinctions,
+issue omissions, balance prompts, the weighted four-module score, and a separate
+approved-catalogue candidate search when its index is ready. A total is
 withheld whenever a required module (for example reviewed currency data) is
 unavailable rather than renormalising incomplete evidence.
 
@@ -124,13 +126,16 @@ paragraph support, current treatment, or applicability to an AI answer.
 The large raw dataset stays outside this repository and is never read during a
 user audit. `api/data/research_catalog/v1/` contains only a compact,
 versioned, review-gated catalogue. It is currently empty while legal review is
-pending and is deliberately not loaded by the active audit corpus. A future
-candidate-retrieval feature may show only: **Potentially relevant authority -
-requires source and treatment review**. It cannot change a verdict, score or
-`verified` status by itself.
+pending and is deliberately not loaded by the active audit corpus. Full audits
+now contain a separate hybrid TF-IDF/SVD candidate-retrieval path, but it fails
+closed until exactly 25 officially sourced, Case-Map-approved authorities and a
+reviewed calibration pack produce a valid index. Every result is labelled:
+**Potentially relevant authority — requires source and treatment review**. A
+candidate cannot change a verdict, score or `verified` status by itself.
 
-Current lexical TF-IDF ranking is narrower: it ranks paragraphs only within an
-authority already resolved from the AI answer's citation. Gemini atomises
+The original evidence TF-IDF ranking remains narrower: it ranks paragraphs only
+within an authority already resolved from the AI answer's citation. Candidate
+retrieval is a distinct non-gating index across the approved catalogue. Gemini atomises
 claims and proposes controlled labels; it does not create a separate fact
 record or legal conclusion. Court level is displayed, but declaring an
 authority controlling requires lawyer review.
@@ -169,6 +174,24 @@ OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL=google/gemini-3.5-flash-lite
 ~~~
 
+## Build the approved candidate index
+
+After legal review has populated exactly 25 records in
+`api/data/research_catalog/v1/`, create at least 20 reviewed calibration queries
+and run:
+
+~~~powershell
+cd api
+uv run python -m app.candidate_index_cli --calibration data/research_catalog/v1/candidate_calibration.json
+uv run python -m app.candidate_benchmark_cli --queries data/research_catalog/v1/candidate_calibration.json
+~~~
+
+The builder writes a hash-validated, offline TF-IDF/SVD index under
+`api/data/candidate_index/v1/`. Runtime code reads only that index and the
+approved catalogue; it never reads the 78-case queue or raw SG-LegalCite CSV.
+Until the gate passes, `GET /api/v1/candidate-index/status` returns
+`unavailable` and ordinary citation evaluation continues unchanged.
+
 ## Freshness, re-audit, and retention
 
 The API starts an in-process refresh scheduler every 24 hours by default
@@ -187,7 +210,8 @@ production path.
 
 ProofMark does not use earlier user answers as legal authority, feedback, or
 training data. It may reuse an exact result only when this cache key matches:
-answer + original question + facts + audit mode + corpus version + engine
+answer + original question + facts + audit mode + corpus version + candidate
+index version/hash + engine
 version + parser version + taxonomy version + approved currency-register
 version + assurance-policy version.
 
@@ -258,6 +282,10 @@ npm run build
 cd ..\api
 uv run python -m app.research_catalog_cli validate --catalogue-dir data/research_catalog/v1
 ```
+
+The candidate-index build and benchmark commands in **Build the approved
+candidate index** are release gates to run only after legal approval. They are
+expected to fail closed while the catalogue is not ready.
 
 ## Scope boundary
 

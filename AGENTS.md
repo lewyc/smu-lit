@@ -56,6 +56,10 @@ Already implemented in the repository:
   optional Supabase persistence.
 - Cited-authority paragraph ranking: TF-IDF ranks passages **within an
   already-resolved cited authority**. It does not retrieve across authorities.
+- A separate offline TF-IDF/SVD candidate index is implemented for Full audits.
+  It remains unavailable until exactly 25 officially sourced authorities,
+  approved Case Maps, and reviewed calibration queries pass the release gate.
+  Its research leads never alter verdicts, evidence, gates, or scores.
 - SG Courts-only automated refresh, immutable snapshots, provenance,
   background refresh, cached fallback, freshness and re-audit handling.
 - Case Map draft generation, text-PDF import, reviewer correction/approval,
@@ -113,7 +117,8 @@ each displayable candidate has an official source and evidence status.
 
 ### Phase 2 — Cross-authority candidate retrieval
 
-1. Add a separate pre-built index across the curated candidate snapshot.
+1. Populate and legally approve the 25-authority catalogue required by the
+   implemented pre-built hybrid candidate index.
 2. Query it using supplied question/facts plus the extracted controlled
    proposition. Do not treat Gemini output as a factual record; it atomises
    claims and assigns controlled fields.
@@ -121,11 +126,12 @@ each displayable candidate has an official source and evidence status.
    Case Map status and the mandatory research-lead label.
 4. Keep this path separate from existing cited-authority TF-IDF ranking and
    from the deterministic verdict rules.
-5. If an uncited candidate is materially relevant, emit a `potential_omission`
-   **review flag**, never a new conclusion or automatic score penalty.
+5. Keep retrieved leads separate from the existing static `potential_omission`
+   checklist flag and from every conclusion or score calculation.
 
-**Exit criteria:** fast offline candidate suggestions that cannot be mistaken
-for verified support or autonomous legal advice.
+**Exit criteria:** the implemented retrieval path has a legally approved index,
+reviewed calibration pack, Precision@5/Recall@5/MRR evidence, and fast offline
+candidate suggestions that cannot be mistaken for verified support or advice.
 
 ### Phase 3 — Runtime evidence and review integration
 
@@ -241,8 +247,8 @@ Advance an MVP feature to product use only when all of these gates are met:
 | P0 | Correct README/pitch/Assurance claims | Product + engineering | No SAL affiliation error; discovery and verification are clearly separated |
 | P1 | Create data-source manifest and curated candidate-selection protocol | Research lead | Licences, hashes, source provenance and reviewer status recorded |
 | P1 | Curate first 25 official, restraint-of-trade authorities | Legal research + engineering | Official source and approved/queued Case Map for every candidate |
-| P1 | Build compact offline candidate-index artifact and loader | Engineering | Versioned index is produced offline and never loads raw corpus at audit time |
-| P1 | Add top-3–5 candidate retrieval and `potential_omission` review flag | Engineering + legal review | No candidate changes a score/verdict; labels and provenance render in UI |
+| P1 | Approve and build the compact candidate-index artifact | Engineering + legal review | Exactly 25 approved records and 20 reviewed queries produce a versioned offline index |
+| P1 | Certify top-5 candidate retrieval | Engineering + legal review | Precision@5/Recall@5/MRR recorded; no candidate changes a score or verdict |
 | P2 | Expand hostile benchmark and collect quality metrics | QA + legal research | 15–20 reviewed examples; retrieval and evaluator metrics reported separately |
 | P2 | Polish one audit-detail pitch flow and rehearse it | Product + design | One-minute, frozen-snapshot demo with good and bad citations |
 | Optional | Deploy/review Supabase connected mode | Project owner + engineering | Migrations/RLS reviewed, applied and exercised with demo users |

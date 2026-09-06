@@ -179,6 +179,7 @@ export interface AuditDetail extends AuditSummary {
   score_gates?: ScoreGate[]
   score_cap?: number | null
   completeness_searches?: CompletenessSearch[]
+  candidate_search?: CandidateSearchResult
 }
 
 export interface AssuranceQuestionResult {
@@ -241,6 +242,58 @@ export interface CompletenessSearch {
   searched_and_not_found: string[]
   confidence_band: string
   measured_accuracy: number | null
+}
+
+export interface CandidateParagraph {
+  paragraph_label: string
+  text: string
+}
+
+export interface CandidateAuthorityLead {
+  rank: number
+  citation: string
+  citation_key: string
+  case_name: string
+  court: string
+  official_url: string
+  matched_claim_orders: number[]
+  matched_propositions: string[]
+  paragraphs: CandidateParagraph[]
+  limitations: string[]
+  source_role: 'ratio_candidate' | 'holding' | 'obiter_candidate' | 'party_submission' | 'factual_finding' | 'procedural_history' | 'disposition'
+  treatment_status: 'current_reviewed' | 'negative_treatment' | 'not_verified'
+  lexical_score: number
+  dense_score: number
+  combined_score: number
+  case_map_version: number
+  match_rationale: string
+  review_label: 'Potentially relevant authority — requires source and treatment review'
+}
+
+export interface CandidateSearchResult {
+  status: 'not_requested' | 'complete' | 'unavailable'
+  unavailable_reason: string | null
+  catalogue_version: string | null
+  catalogue_hash: string | null
+  index_version: string | null
+  index_hash: string | null
+  retrieval_version: string | null
+  searched_claim_count: number
+  result_count: number
+  candidates: CandidateAuthorityLead[]
+  limitation_statement: string
+}
+
+export interface CandidateIndexStatus {
+  status: 'ready' | 'unavailable'
+  reason: string | null
+  catalogue_version: string | null
+  catalogue_hash: string | null
+  index_version: string | null
+  index_hash: string | null
+  retrieval_version: string | null
+  authority_count: number
+  chunk_count: number
 }
 
 export interface EvaluationFlag {
@@ -519,6 +572,7 @@ export interface AuditRepository {
   getCorpus(): Promise<CorpusMetadata>
   startCorpusRefresh(): Promise<RefreshRun>
   getLatestCorpusRefresh(): Promise<RefreshRun | null>
+  getCandidateIndexStatus(): Promise<CandidateIndexStatus>
   loadDemoAnswer(): Promise<string>
   listCaseMaps(): Promise<CaseMapDetail[]>
   generateCaseMap(citation: string): Promise<CaseMapDetail>

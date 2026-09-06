@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, FileText, Flag, Network, RefreshCw, Scale, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FileText, Flag, Network, RefreshCw, Scale, Search, ShieldCheck, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -272,6 +272,38 @@ export function AuditDetailPage() {
               )
             })}
           </div>
+        </section>
+      )}
+
+      {audit.audit_mode === 'full' && audit.candidate_search && (
+        <section className="panel candidate-search-panel" aria-label="Potentially relevant authorities">
+          <div className="graph-heading"><span><Search size={20} /></span><div><p className="eyebrow">Independent approved-catalogue search</p><h2>Potentially relevant authorities</h2></div></div>
+          <p className="prompt-intro">{audit.candidate_search.limitation_statement}</p>
+          {audit.candidate_search.status === 'unavailable' && (
+            <div className="candidate-unavailable"><strong>Candidate discovery unavailable</strong><p>{audit.candidate_search.unavailable_reason}</p></div>
+          )}
+          {audit.candidate_search.status === 'complete' && audit.candidate_search.candidates.length === 0 && (
+            <div className="candidate-unavailable"><strong>No candidate passed the calibrated threshold</strong><p>This is not evidence that the answer is complete.</p></div>
+          )}
+          {audit.candidate_search.candidates.map((candidate) => (
+            <article className="candidate-card" key={candidate.citation_key}>
+              <header><div><span>Candidate {candidate.rank}</span><h3>{candidate.case_name}</h3><p>{candidate.citation} · {candidate.court}</p></div><strong>{Math.round(candidate.combined_score * 100)}% retrieval score</strong></header>
+              <div className="candidate-review-label">{candidate.review_label}</div>
+              <p>{candidate.match_rationale}</p>
+              <div className="candidate-meta">
+                <span>Claims {candidate.matched_claim_orders.join(', ')}</span>
+                <span>{candidate.matched_propositions.map((item) => item.replaceAll('_', ' ')).join(', ')}</span>
+                <span>Role: {candidate.source_role.replaceAll('_', ' ')}</span>
+                <span>Treatment: {candidate.treatment_status.replaceAll('_', ' ')}</span>
+                <span>Case Map v{candidate.case_map_version}</span>
+                <span>Lexical {Math.round(candidate.lexical_score * 100)}% · dense {Math.round(candidate.dense_score * 100)}%</span>
+              </div>
+              {candidate.paragraphs.map((paragraph) => <blockquote key={paragraph.paragraph_label}><strong>{paragraph.paragraph_label}</strong> {paragraph.text}</blockquote>)}
+              {candidate.limitations.length > 0 && <div className="limitations"><strong>Recorded limitations</strong><ul>{candidate.limitations.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+              <a href={candidate.official_url} target="_blank" rel="noreferrer">Open official judgment <ExternalLink size={13} /></a>
+            </article>
+          ))}
+          <small className="candidate-provenance">Catalogue {audit.candidate_search.catalogue_version ?? 'unavailable'} · index {audit.candidate_search.index_version ?? 'unavailable'} · {audit.candidate_search.retrieval_version ?? 'retrieval unavailable'}</small>
         </section>
       )}
 

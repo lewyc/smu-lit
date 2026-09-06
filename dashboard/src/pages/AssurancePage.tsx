@@ -21,13 +21,14 @@ const current = [
   'Source-versioned cache, stale-report warning, and linked re-audit',
   'Reviewer-only treatment, supersession, and amendment register',
   'Court level is surfaced; controlling status requires lawyer review',
+  'Offline TF-IDF/SVD candidate retrieval, gated on 25 approved authorities',
 ]
 
 const future = [
   'Supabase Queues and stateless workers',
   'PGMQ-backed stateless official-judgment refresh workers',
   'Hybrid lexical and pgvector retrieval',
-  'Offline curated research catalogue and candidate-authority discovery',
+  'Larger licensed catalogues and production candidate-review workflows',
   'Organisation administration and audit exports',
   'Drift monitoring and larger legal benchmark sets',
   'LicensedSourceConnector for SAL/SLR/LawNet where tenant licensing permits',
@@ -87,10 +88,10 @@ export function AssurancePage() {
         <strong>Licensed materials: future integration only.</strong> VERITAS does not scrape SAL, SLR, or LawNet. A future <code>LicensedSourceConnector</code> would ingest private tenant material only after the organisation confirms its licence and terms permit it.
       </div>
       <div className="corpus-notice">
-        <strong>Research candidates are not verdict evidence.</strong> A future offline catalogue may use the independent CC BY 4.0 SG-LegalCite benchmark to nominate potentially relevant authorities. Its citing-judgment context and LLM-extracted principle are discovery metadata only; official paragraphs, reviewed Case Maps, and treatment review remain required before any legal support is presented.
+        <strong>Research candidates are not verdict evidence.</strong> Full audits have a separate offline hybrid retrieval path, but it remains unavailable until 25 officially sourced authorities and their Case Maps are approved and benchmarked. SG-LegalCite metadata can nominate research records but is never searched during an audit. Every displayed lead requires source and treatment review.
       </div>
       <div className="corpus-notice">
-        <strong>Tier 0 scope.</strong> The current audit checks citation identity, pinpoints, direct quotations, reviewer-labelled source roles, approved treatment records and language modality. Factual fit, legal significance, entailment and missing-authority analysis are deferred.
+        <strong>Candidate-search boundary.</strong> Retrieval ranks approved research leads independently. It cannot change citation evidence, legal verdicts, score gates, module scores, or controlling-authority status.
       </div>
       <div className="panel boundary-panel">
         <p className="eyebrow">Who audits the auditor?</p>

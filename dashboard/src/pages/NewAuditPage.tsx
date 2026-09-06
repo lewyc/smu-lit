@@ -1,10 +1,10 @@
 import { FlaskConical, Play, ShieldCheck } from 'lucide-react'
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorPanel, PageHeader } from '../components/Common'
 import { auditRepository } from '../lib/repository'
 import { dataMode } from '../lib/supabase'
-import type { AuditMode, ParserMode } from '../types'
+import type { AuditMode, CandidateIndexStatus, ParserMode } from '../types'
 
 export function NewAuditPage() {
   const navigate = useNavigate()
@@ -15,6 +15,17 @@ export function NewAuditPage() {
   const [facts, setFacts] = useState('')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
+  const [candidateIndex, setCandidateIndex] = useState<CandidateIndexStatus | null>(null)
+
+  useEffect(() => {
+    auditRepository.getCandidateIndexStatus()
+      .then(setCandidateIndex)
+      .catch(() => setCandidateIndex({
+        status: 'unavailable', reason: 'Candidate-index status could not be reached.',
+        catalogue_version: null, catalogue_hash: null, index_version: null, index_hash: null,
+        retrieval_version: null, authority_count: 0, chunk_count: 0,
+      }))
+  }, [])
 
   async function loadDemo() {
     setAnswer(await auditRepository.loadDemoAnswer())
@@ -27,6 +38,7 @@ export function NewAuditPage() {
     event.preventDefault()
     if (!answer.trim()) return setError('Paste an answer or load the demonstration answer first.')
     if (auditMode === 'full' && !originalQuestion.trim()) return setError('Full mode requires the original legal question.')
+    if (auditMode === 'full' && !facts.trim()) return setError('Full mode requires factual context for candidate-authority retrieval.')
     setRunning(true)
     setError('')
     try {
@@ -79,12 +91,13 @@ export function NewAuditPage() {
                 />
               </label>
               <label>
-                Optional factual context
+                Factual context
                 <textarea
                   className="context-textarea"
                   value={facts}
                   onChange={(event) => setFacts(event.target.value)}
                   maxLength={10_000}
+                  required
                   placeholder="Duration, territory, employee role, protected interests, procedural stage…"
                 />
               </label>
@@ -119,6 +132,15 @@ export function NewAuditPage() {
             <ShieldCheck size={18} />
             <p><strong>Verdicts remain deterministic.</strong> Gemini may structure claims; it cannot create evidence or choose a verdict.</p>
           </div>
+          {auditMode === 'full' && (
+            <div className={'candidate-readiness ' + (candidateIndex?.status ?? 'unavailable')} role="status">
+              <strong>Candidate-authority index: {candidateIndex?.status ?? 'checking'}</strong>
+              <span>{candidateIndex?.status === 'ready'
+                ? `${candidateIndex.authority_count} approved authorities · ${candidateIndex.index_version}`
+                : candidateIndex?.reason ?? 'Checking approved catalogue readiness…'}</span>
+              <small>An unavailable index does not change the citation audit; candidate discovery will be marked unavailable.</small>
+            </div>
+          )}
           <button className="button primary run-button" disabled={running || !answer.trim()} type="submit">
             {running ? <span className="spinner small" /> : <Play size={16} />}
             {running ? 'Running audit…' : 'Run audit'}
